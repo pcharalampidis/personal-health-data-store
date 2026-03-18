@@ -1,0 +1,38 @@
+node_modules/
+artifacts/
+cache/
+coverage/
+typechain-types/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build output
+backend/dist/
+frontend/dist/
+frontend/build/
+
+# Hardhat
+cache_hardhat/
+
+# Coverage
+coverage.json
+
+# Chat artifacts (cursor)
+.chat/
+
+# Documentation (excluded from code-only repo)
+*.md
+**/*.md

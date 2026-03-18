@@ -1,0 +1,22 @@
+{
+  "name": "personal-health-data-store",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Blockchain-based personal health data store with IPFS, smart contracts, and client-side encryption",
+  "scripts": {
+    "build": "npx hardhat build",
+    "test:contracts": "npx hardhat test",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "deploy:local": "npx hardhat run scripts/deploy.ts --network localhost"
+  },
+  "keywords": ["blockchain", "health-data", "ipfs", "ethereum", "smart-contracts"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.3",
+    "concurrently": "^9.2.1",
+    "hardhat": "^3.1.12"
+  }
+}
