@@ -9,7 +9,9 @@
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "deploy:local": "npx hardhat run scripts/deploy.ts --network localhost"
+    "deploy:local": "npx hardhat run scripts/deploy.ts --network localhost",
+    "start:dev": "start-dev.bat",
+    "start:all": "node scripts/start-dev.js"
   },
   "keywords": ["blockchain", "health-data", "ipfs", "ethereum", "smart-contracts"],
   "author": "",

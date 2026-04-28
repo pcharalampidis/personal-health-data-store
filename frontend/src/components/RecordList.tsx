@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { BrowserProvider } from "ethers";
-import { getRecordManagerContract, RECORD_TYPES } from "../services/contracts.js";
+import { getRecordManagerContract, RECORD_TYPES, RECORD_MANAGER_ADDRESS } from "../services/contracts.js";
 
 interface RecordInfo {
   recordId: bigint;
@@ -33,6 +33,15 @@ export function RecordList({ account, provider }: Props) {
 
     try {
       const contract = getRecordManagerContract(provider);
+      
+      // Check if contract exists at address
+      const code = await provider.getCode(RECORD_MANAGER_ADDRESS);
+      if (code === '0x') {
+        setError("Contract not found at address. Please run 'npm run deploy:local' first.");
+        setLoading(false);
+        return;
+      }
+      
       const ids: bigint[] = await contract.getRecordsByOwner(account);
 
       const loaded: RecordInfo[] = [];
@@ -53,6 +62,8 @@ export function RecordList({ account, provider }: Props) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("address not set")) {
         setError("Contract addresses not configured. Deploy contracts first.");
+      } else if (msg.includes("could not decode result")) {
+        setError("Contract not deployed or wrong network. Make sure Hardhat node is running and contracts are deployed.");
       } else {
         setError(msg);
       }

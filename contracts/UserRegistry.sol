@@ -5,10 +5,8 @@ import "./interfaces/IUserRegistry.sol";
 
 /**
  * @title UserRegistry
- * @notice Manages wallet-based identity, role assignment, doctor verification,
- *         and encryption public key storage.
- * @dev Custom Ownable + Pausable (no OpenZeppelin). The contract owner
- *      represents the Custodian admin who verifies/rejects doctors.
+ * @notice Manages wallet-based identity, role assignment, and encryption public key storage.
+ * @dev 
  *
  * Requirements Covered: FR-001, FR-003, FR-004, FR-005, NFR-006
  */
@@ -54,7 +52,6 @@ contract UserRegistry is IUserRegistry {
     // ── Storage ─────────────────────────────────────
     mapping(address => UserProfile) private users;
     mapping(address => DoctorProfile) private doctors;
-    address[] private _pendingDoctors;
 
     uint256 public totalUsers;
     uint256 public totalDoctors;
@@ -118,47 +115,13 @@ contract UserRegistry is IUserRegistry {
             licenseNumber: _licenseNumber,
             specialty: _specialty,
             institution: _institution,
-            status: DoctorStatus.Pending,
-            verifiedAt: 0
+            registeredAt: block.timestamp
         });
-
-        _pendingDoctors.push(msg.sender);
 
         totalUsers++;
         totalDoctors++;
 
         emit UserRegistered(msg.sender, Role.Doctor, block.timestamp);
-        emit DoctorRegistrationRequested(msg.sender, _name, _licenseNumber, block.timestamp);
-    }
-
-    // ── Admin Functions ─────────────────────────────
-
-    function verifyDoctor(address _doctorAddress) external override onlyOwner {
-        require(users[_doctorAddress].isRegistered, "UserRegistry: doctor not registered");
-        require(users[_doctorAddress].role == Role.Doctor, "UserRegistry: not a doctor");
-        require(doctors[_doctorAddress].status == DoctorStatus.Pending, "UserRegistry: not pending");
-
-        doctors[_doctorAddress].status = DoctorStatus.Verified;
-        doctors[_doctorAddress].verifiedAt = block.timestamp;
-
-        _removePendingDoctor(_doctorAddress);
-
-        emit DoctorVerified(_doctorAddress, msg.sender, block.timestamp);
-    }
-
-    function rejectDoctor(
-        address _doctorAddress,
-        string calldata _reason
-    ) external override onlyOwner {
-        require(users[_doctorAddress].isRegistered, "UserRegistry: doctor not registered");
-        require(users[_doctorAddress].role == Role.Doctor, "UserRegistry: not a doctor");
-        require(doctors[_doctorAddress].status == DoctorStatus.Pending, "UserRegistry: not pending");
-
-        doctors[_doctorAddress].status = DoctorStatus.Rejected;
-
-        _removePendingDoctor(_doctorAddress);
-
-        emit DoctorRejected(_doctorAddress, msg.sender, _reason, block.timestamp);
     }
 
     // ── Key Management ──────────────────────────────
@@ -198,24 +161,9 @@ contract UserRegistry is IUserRegistry {
     }
 
     function isDoctorVerified(address _doctor) external view override returns (bool) {
-        return users[_doctor].role == Role.Doctor &&
-               doctors[_doctor].status == DoctorStatus.Verified;
-    }
-
-    function getPendingDoctors() external view override returns (address[] memory) {
-        return _pendingDoctors;
-    }
-
-    // ── Internal Helpers ────────────────────────────
-
-    function _removePendingDoctor(address _doctor) private {
-        uint256 length = _pendingDoctors.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (_pendingDoctors[i] == _doctor) {
-                _pendingDoctors[i] = _pendingDoctors[length - 1];
-                _pendingDoctors.pop();
-                return;
-            }
-        }
+        // Doctor verification is handled off-chain by Custodian registry
+        // This function returns true if address is registered as a doctor
+        // Detailed verification (for emergency access) checks Custodian registry
+        return users[_doctor].role == Role.Doctor;
     }
 }

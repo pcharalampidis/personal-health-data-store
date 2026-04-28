@@ -97,8 +97,7 @@ contract RecordManager is IRecordManager {
         require(
             msg.sender == owner ||
             msg.sender == accessControlAddress ||
-            msg.sender == emergencyAccessAddress ||
-            records[0].owner == msg.sender, // dummy; real check is per-record
+            msg.sender == emergencyAccessAddress,
             "RecordManager: unauthorised caller"
         );
         _;

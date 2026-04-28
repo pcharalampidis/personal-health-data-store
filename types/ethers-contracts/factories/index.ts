@@ -2,5 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as interfaces from './interfaces/index.js';
+export { AccessControl__factory } from './AccessControl__factory.js';
+export { EmergencyAccess__factory } from './EmergencyAccess__factory.js';
 export { RecordManager__factory } from './RecordManager__factory.js';
 export { UserRegistry__factory } from './UserRegistry__factory.js';

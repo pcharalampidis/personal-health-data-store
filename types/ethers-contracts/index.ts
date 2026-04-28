@@ -3,9 +3,17 @@
 /* eslint-disable */
 import type * as interfaces from './interfaces/index.js';
 export type { interfaces };
+export type { AccessControl } from './AccessControl.js';
+export type { EmergencyAccess } from './EmergencyAccess.js';
 export type { RecordManager } from './RecordManager.js';
 export type { UserRegistry } from './UserRegistry.js';
 export * as factories from './factories/index.js';
+export { AccessControl__factory } from './factories/AccessControl__factory.js';
+export { EmergencyAccess__factory } from './factories/EmergencyAccess__factory.js';
+export type { IAccessControl } from './interfaces/IAccessControl.js';
+export { IAccessControl__factory } from './factories/interfaces/IAccessControl__factory.js';
+export type { IEmergencyAccess } from './interfaces/IEmergencyAccess.js';
+export { IEmergencyAccess__factory } from './factories/interfaces/IEmergencyAccess__factory.js';
 export type { IRecordManager } from './interfaces/IRecordManager.js';
 export { IRecordManager__factory } from './factories/interfaces/IRecordManager__factory.js';
 export type { IUserRegistry } from './interfaces/IUserRegistry.js';

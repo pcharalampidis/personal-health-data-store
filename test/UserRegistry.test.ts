@@ -83,8 +83,6 @@ describe("UserRegistry", function () {
       await expect(tx)
         .to.emit(userRegistry, "UserRegistered")
         .withArgs(doctor1.address, 2n, () => true); // Role.Doctor = 2
-      await expect(tx)
-        .to.emit(userRegistry, "DoctorRegistrationRequested");
 
       expect(await userRegistry.isRegistered(doctor1.address)).to.be.true;
       expect(await userRegistry.getUserRole(doctor1.address)).to.equal(2n);
@@ -94,7 +92,6 @@ describe("UserRegistry", function () {
       expect(doctorProfile.licenseNumber).to.equal("LIC-001");
       expect(doctorProfile.specialty).to.equal("Cardiology");
       expect(doctorProfile.institution).to.equal("City Hospital");
-      expect(doctorProfile.status).to.equal(0n); // Pending
     });
 
     it("should reject doctor with empty name", async function () {
@@ -127,97 +124,16 @@ describe("UserRegistry", function () {
       ).to.be.revertedWith("UserRegistry: empty public key");
     });
 
-    it("should add doctor to pending list", async function () {
+    it("should consider registered doctor as verified (on-chain)", async function () {
+      // Note: Detailed verification for emergency access checks Custodian registry off-chain
       await userRegistry.connect(doctor1).registerAsDoctor(
         "Dr. Smith", "LIC-001", "Cardiology", "Hospital", SAMPLE_PUB_KEY
       );
-
-      const pending = await userRegistry.getPendingDoctors();
-      expect(pending.length).to.equal(1);
-      expect(pending[0]).to.equal(doctor1.address);
-    });
-
-    it("should not be verified by default", async function () {
-      await userRegistry.connect(doctor1).registerAsDoctor(
-        "Dr. Smith", "LIC-001", "Cardiology", "Hospital", SAMPLE_PUB_KEY
-      );
-      expect(await userRegistry.isDoctorVerified(doctor1.address)).to.be.false;
-    });
-  });
-
-  // ── UR-T06 - UR-T08: Doctor verification/rejection
-  describe("Doctor Verification", function () {
-    beforeEach(async function () {
-      await userRegistry.connect(doctor1).registerAsDoctor(
-        "Dr. Smith", "LIC-001", "Cardiology", "Hospital", SAMPLE_PUB_KEY
-      );
-    });
-
-    it("should allow owner to verify a pending doctor", async function () {
-      await expect(userRegistry.connect(owner).verifyDoctor(doctor1.address))
-        .to.emit(userRegistry, "DoctorVerified")
-        .withArgs(doctor1.address, owner.address, () => true);
-
       expect(await userRegistry.isDoctorVerified(doctor1.address)).to.be.true;
-
-      const profile = await userRegistry.getDoctorProfile(doctor1.address);
-      expect(profile.status).to.equal(1n); // Verified
-      expect(profile.verifiedAt).to.be.greaterThan(0n);
-
-      const pending = await userRegistry.getPendingDoctors();
-      expect(pending.length).to.equal(0);
-    });
-
-    it("should allow owner to reject a pending doctor", async function () {
-      await expect(
-        userRegistry.connect(owner).rejectDoctor(doctor1.address, "Invalid license")
-      )
-        .to.emit(userRegistry, "DoctorRejected")
-        .withArgs(doctor1.address, owner.address, "Invalid license", () => true);
-
-      expect(await userRegistry.isDoctorVerified(doctor1.address)).to.be.false;
-
-      const profile = await userRegistry.getDoctorProfile(doctor1.address);
-      expect(profile.status).to.equal(2n); // Rejected
-
-      const pending = await userRegistry.getPendingDoctors();
-      expect(pending.length).to.equal(0);
-    });
-
-    it("should revert if non-owner tries to verify", async function () {
-      await expect(
-        userRegistry.connect(stranger).verifyDoctor(doctor1.address)
-      ).to.be.revertedWith("UserRegistry: caller is not the owner");
-    });
-
-    it("should revert if non-owner tries to reject", async function () {
-      await expect(
-        userRegistry.connect(stranger).rejectDoctor(doctor1.address, "reason")
-      ).to.be.revertedWith("UserRegistry: caller is not the owner");
-    });
-
-    it("should revert verifying an already verified doctor", async function () {
-      await userRegistry.connect(owner).verifyDoctor(doctor1.address);
-      await expect(
-        userRegistry.connect(owner).verifyDoctor(doctor1.address)
-      ).to.be.revertedWith("UserRegistry: not pending");
-    });
-
-    it("should revert verifying an unregistered address", async function () {
-      await expect(
-        userRegistry.connect(owner).verifyDoctor(stranger.address)
-      ).to.be.revertedWith("UserRegistry: doctor not registered");
-    });
-
-    it("should revert verifying a patient as doctor", async function () {
-      await userRegistry.connect(patient1).registerAsPatient(SAMPLE_PUB_KEY);
-      await expect(
-        userRegistry.connect(owner).verifyDoctor(patient1.address)
-      ).to.be.revertedWith("UserRegistry: not a doctor");
     });
   });
 
-  // ── UR-T09 - UR-T10: Public key management ───────
+  // ── UR-T06 - UR-T08: Public key management ───────
   describe("Public Key Management", function () {
     beforeEach(async function () {
       await userRegistry.connect(patient1).registerAsPatient(SAMPLE_PUB_KEY);
@@ -245,7 +161,7 @@ describe("UserRegistry", function () {
     });
   });
 
-  // ── UR-T11 - UR-T12: View functions ──────────────
+  // ── UR-T09 - UR-T12: View functions ──────────────
   describe("View Functions", function () {
     it("should return Unregistered role for unknown address", async function () {
       expect(await userRegistry.getUserRole(stranger.address)).to.equal(0n);
@@ -307,24 +223,26 @@ describe("UserRegistry", function () {
     });
   });
 
-  // ── Pending doctors array management ──────────────
-  describe("Pending Doctors Management", function () {
-    it("should handle multiple pending doctors correctly", async function () {
-      await userRegistry.connect(doctor1).registerAsDoctor(
-        "Dr. Smith", "LIC-001", "Cardiology", "Hospital A", SAMPLE_PUB_KEY
-      );
-      await userRegistry.connect(doctor2).registerAsDoctor(
-        "Dr. Jones", "LIC-002", "Neurology", "Hospital B", SAMPLE_PUB_KEY_2
-      );
+  // ── UR Edge Cases: pause semantics ────────────────
+  describe("Pause Edge Cases", function () {
+    it("should reject doctor registration while paused", async function () {
+      await userRegistry.connect(owner).pause();
 
-      let pending = await userRegistry.getPendingDoctors();
-      expect(pending.length).to.equal(2);
+      await expect(
+        userRegistry.connect(doctor1).registerAsDoctor(
+          "Dr. Smith",
+          "LIC-001",
+          "Cardiology",
+          "Hospital",
+          SAMPLE_PUB_KEY
+        )
+      ).to.be.revertedWith("UserRegistry: contract is paused");
+    });
 
-      await userRegistry.connect(owner).verifyDoctor(doctor1.address);
-
-      pending = await userRegistry.getPendingDoctors();
-      expect(pending.length).to.equal(1);
-      expect(pending[0]).to.equal(doctor2.address);
+    it("should reject unpausing when not paused", async function () {
+      await expect(
+        userRegistry.connect(owner).unpause()
+      ).to.be.revertedWith("UserRegistry: contract is not paused");
     });
   });
 });

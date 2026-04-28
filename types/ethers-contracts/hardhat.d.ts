@@ -10,22 +10,38 @@ import * as Contracts from "./index.js";
 
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
-  getContractFactory(name: 'IRecordManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IRecordManager__factory>
+  getContractFactory(name: 'AccessControl', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.AccessControl__factory>
+getContractFactory(name: 'EmergencyAccess', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.EmergencyAccess__factory>
+getContractFactory(name: 'IAccessControl', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IAccessControl__factory>
+getContractFactory(name: 'IEmergencyAccess', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IEmergencyAccess__factory>
+getContractFactory(name: 'IRecordManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IRecordManager__factory>
 getContractFactory(name: 'IUserRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IUserRegistry__factory>
 getContractFactory(name: 'RecordManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.RecordManager__factory>
 getContractFactory(name: 'UserRegistry', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.UserRegistry__factory>
 
-  getContractAt(name: 'IRecordManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IRecordManager>
+  getContractAt(name: 'AccessControl', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.AccessControl>
+getContractAt(name: 'EmergencyAccess', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.EmergencyAccess>
+getContractAt(name: 'IAccessControl', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IAccessControl>
+getContractAt(name: 'IEmergencyAccess', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IEmergencyAccess>
+getContractAt(name: 'IRecordManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IRecordManager>
 getContractAt(name: 'IUserRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IUserRegistry>
 getContractAt(name: 'RecordManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.RecordManager>
 getContractAt(name: 'UserRegistry', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.UserRegistry>
 
-  deployContract(name: 'IRecordManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRecordManager>
+  deployContract(name: 'AccessControl', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AccessControl>
+deployContract(name: 'EmergencyAccess', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EmergencyAccess>
+deployContract(name: 'IAccessControl', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IAccessControl>
+deployContract(name: 'IEmergencyAccess', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IEmergencyAccess>
+deployContract(name: 'IRecordManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRecordManager>
 deployContract(name: 'IUserRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IUserRegistry>
 deployContract(name: 'RecordManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RecordManager>
 deployContract(name: 'UserRegistry', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.UserRegistry>
 
-  deployContract(name: 'IRecordManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRecordManager>
+  deployContract(name: 'AccessControl', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.AccessControl>
+deployContract(name: 'EmergencyAccess', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.EmergencyAccess>
+deployContract(name: 'IAccessControl', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IAccessControl>
+deployContract(name: 'IEmergencyAccess', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IEmergencyAccess>
+deployContract(name: 'IRecordManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IRecordManager>
 deployContract(name: 'IUserRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IUserRegistry>
 deployContract(name: 'RecordManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RecordManager>
 deployContract(name: 'UserRegistry', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.UserRegistry>

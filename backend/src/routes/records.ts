@@ -21,8 +21,18 @@ recordsRouter.post(
         return;
       }
 
+      console.log(`[Backend] Receiving upload: ${fileName}`);
+      console.log(`[Backend] Base64 content length: ${encryptedContent.length} chars`);
+
       const buffer = Buffer.from(encryptedContent, "base64");
+      console.log(`[Backend] Decoded buffer size: ${buffer.length} bytes`);
+      
+      console.log(`[Backend] Pinning to IPFS via Pinata...`);
       const result = await pinToIPFS(buffer, fileName);
+      
+      console.log(`[Backend] ✅ IPFS upload successful!`);
+      console.log(`[Backend]    CID: ${result.IpfsHash}`);
+      console.log(`[Backend]    Size: ${result.PinSize} bytes`);
 
       res.json({
         success: true,
@@ -31,6 +41,7 @@ recordsRouter.post(
         timestamp: result.Timestamp,
       });
     } catch (err) {
+      console.error(`[Backend] ❌ Upload failed:`, err);
       next(err);
     }
   }

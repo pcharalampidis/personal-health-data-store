@@ -1,11 +1,22 @@
 import { useState } from "react";
 import { useWallet } from "./hooks/useWallet.js";
 import { WalletConnect } from "./components/WalletConnect.js";
+import { Register } from "./components/Register.js";
 import { UploadRecord } from "./components/UploadRecord.js";
 import { RecordList } from "./components/RecordList.js";
 
 function App() {
-  const { account, provider, signer, connect, disconnect } = useWallet();
+  const {
+    account,
+    provider,
+    signer,
+    connect,
+    disconnect,
+    pendingAccounts,
+    confirmAccount,
+    cancelAccountPick,
+    refreshPermittedAccounts,
+  } = useWallet();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleUploaded = () => setRefreshKey((k) => k + 1);
@@ -22,12 +33,17 @@ function App() {
       <main style={styles.main}>
         <WalletConnect
           account={account}
+          pendingAccounts={pendingAccounts}
           onConnect={connect}
           onDisconnect={disconnect}
+          onConfirmAccount={confirmAccount}
+          onCancelPending={cancelAccountPick}
+          onRefreshPermitted={refreshPermittedAccounts}
         />
 
         {account && signer && provider && (
           <>
+            <Register signer={signer} account={account} />
             <UploadRecord signer={signer} onUploaded={handleUploaded} />
             <RecordList
               key={refreshKey}

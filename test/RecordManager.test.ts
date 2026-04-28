@@ -35,7 +35,7 @@ describe("RecordManager", function () {
     await userReg.connect(_doctor1).registerAsDoctor(
       "Dr. Smith", "LIC-001", "Cardiology", "Hospital", PUB_KEY
     );
-    await userReg.connect(_owner).verifyDoctor(_doctor1.address);
+    // Note: Doctor verification is handled off-chain by Custodian registry
 
     return {
       userRegistry: userReg,
@@ -316,6 +316,103 @@ describe("RecordManager", function () {
 
     it("should return false for non-existent record in isRecordActive", async function () {
       expect(await recordManager.isRecordActive(999)).to.be.false;
+    });
+  });
+
+  // ── RM Edge Cases: authorization + pause ─────────
+  describe("Authorization and Pause Edge Cases", function () {
+    beforeEach(async function () {
+      await recordManager.connect(patient1).addRecord(
+        SAMPLE_CID,
+        SAMPLE_HASH,
+        0,
+        SAMPLE_ENCRYPTED_KEY
+      );
+    });
+
+    it("should allow owner to set AccessControl and EmergencyAccess addresses", async function () {
+      await recordManager.connect(owner).setAccessControlAddress(doctor1.address);
+      await recordManager.connect(owner).setEmergencyAccessAddress(patient2.address);
+    });
+
+    it("should reject non-owner setting AccessControl address", async function () {
+      await expect(
+        recordManager.connect(patient1).setAccessControlAddress(doctor1.address)
+      ).to.be.revertedWith("RecordManager: caller is not the owner");
+    });
+
+    it("should reject non-owner setting EmergencyAccess address", async function () {
+      await expect(
+        recordManager.connect(patient1).setEmergencyAccessAddress(doctor1.address)
+      ).to.be.revertedWith("RecordManager: caller is not the owner");
+    });
+
+    it("should allow configured AccessControl address to store/remove encrypted key", async function () {
+      await recordManager.connect(owner).setAccessControlAddress(doctor1.address);
+
+      await recordManager.connect(doctor1).storeEncryptedKey(
+        1n,
+        patient2.address,
+        SAMPLE_ENCRYPTED_KEY_2
+      );
+
+      expect(await recordManager.getEncryptedKey(1n, patient2.address)).to.equal(SAMPLE_ENCRYPTED_KEY_2);
+
+      await recordManager.connect(doctor1).removeEncryptedKey(1n, patient2.address);
+      expect(await recordManager.getEncryptedKey(1n, patient2.address)).to.equal("0x");
+    });
+
+    it("should reject stranger storing encrypted key", async function () {
+      await expect(
+        recordManager.connect(stranger).storeEncryptedKey(
+          1n,
+          doctor1.address,
+          SAMPLE_ENCRYPTED_KEY_2
+        )
+      ).to.be.revertedWith("RecordManager: unauthorised key storage");
+    });
+
+    it("should pause and block record uploads", async function () {
+      await recordManager.connect(owner).pause();
+
+      await expect(
+        recordManager.connect(patient1).addRecord(
+          "QmPaused",
+          SAMPLE_HASH,
+          0,
+          SAMPLE_ENCRYPTED_KEY
+        )
+      ).to.be.revertedWith("RecordManager: contract is paused");
+    });
+
+    it("should reject pause from non-owner", async function () {
+      await expect(
+        recordManager.connect(patient1).pause()
+      ).to.be.revertedWith("RecordManager: caller is not the owner");
+    });
+
+    it("should unpause and allow record uploads again", async function () {
+      await recordManager.connect(owner).pause();
+      await recordManager.connect(owner).unpause();
+
+      await expect(
+        recordManager.connect(patient1).addRecord(
+          "QmAfterUnpause",
+          SAMPLE_HASH,
+          0,
+          SAMPLE_ENCRYPTED_KEY
+        )
+      ).to.emit(recordManager, "RecordAdded");
+    });
+
+    it("should mark deleted record as inactive", async function () {
+      await recordManager.connect(patient1).deleteRecord(1n);
+
+      expect(await recordManager.isRecordActive(1n)).to.equal(false);
+
+      const record = await recordManager.getRecord(1n);
+      expect(record.status).to.equal(2n);
+      expect(record.ipfsCID).to.equal("");
     });
   });
 });

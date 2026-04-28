@@ -98,6 +98,23 @@ export function toHex(data: Uint8Array): string {
 }
 
 /**
+ * Convert a Uint8Array to a base64 string efficiently.
+ * Avoids stack overflow with large arrays.
+ */
+export function toBase64(data: Uint8Array): string {
+  // Process in chunks to avoid stack overflow
+  const chunkSize = 8192;
+  let result = "";
+  
+  for (let i = 0; i < data.length; i += chunkSize) {
+    const chunk = data.slice(i, i + chunkSize);
+    result += String.fromCharCode(...chunk);
+  }
+  
+  return btoa(result);
+}
+
+/**
  * Convert a hex string back to Uint8Array.
  */
 export function fromHex(hex: string): Uint8Array {

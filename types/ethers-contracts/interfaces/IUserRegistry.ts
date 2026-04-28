@@ -6,9 +6,9 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 export declare namespace IUserRegistry {
       
-    export type DoctorProfileStruct = {name: string, licenseNumber: string, specialty: string, institution: string, status: BigNumberish, verifiedAt: BigNumberish}
+    export type DoctorProfileStruct = {name: string, licenseNumber: string, specialty: string, institution: string, registeredAt: BigNumberish}
 
-    export type DoctorProfileStructOutput = [name: string, licenseNumber: string, specialty: string, institution: string, status: bigint, verifiedAt: bigint] & {name: string, licenseNumber: string, specialty: string, institution: string, status: bigint, verifiedAt: bigint }
+    export type DoctorProfileStructOutput = [name: string, licenseNumber: string, specialty: string, institution: string, registeredAt: bigint] & {name: string, licenseNumber: string, specialty: string, institution: string, registeredAt: bigint }
   
 
     export type UserProfileStruct = {role: BigNumberish, isRegistered: boolean, encryptionPublicKey: BytesLike, registeredAt: BigNumberish}
@@ -18,12 +18,11 @@ export declare namespace IUserRegistry {
     }
 
   export interface IUserRegistryInterface extends Interface {
-    getFunction(nameOrSignature: "getDoctorProfile" | "getPendingDoctors" | "getPublicKey" | "getUserProfile" | "getUserRole" | "isDoctorVerified" | "isRegistered" | "registerAsDoctor" | "registerAsPatient" | "rejectDoctor" | "updatePublicKey" | "verifyDoctor"): FunctionFragment;
+    getFunction(nameOrSignature: "getDoctorProfile" | "getPublicKey" | "getUserProfile" | "getUserRole" | "isDoctorVerified" | "isRegistered" | "registerAsDoctor" | "registerAsPatient" | "updatePublicKey"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "DoctorRegistrationRequested" | "DoctorRejected" | "DoctorVerified" | "PublicKeyUpdated" | "UserRegistered"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "PublicKeyUpdated" | "UserRegistered"): EventFragment;
 
     encodeFunctionData(functionFragment: 'getDoctorProfile', values: [AddressLike]): string;
-encodeFunctionData(functionFragment: 'getPendingDoctors', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getPublicKey', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getUserProfile', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getUserRole', values: [AddressLike]): string;
@@ -31,12 +30,9 @@ encodeFunctionData(functionFragment: 'isDoctorVerified', values: [AddressLike]):
 encodeFunctionData(functionFragment: 'isRegistered', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'registerAsDoctor', values: [string, string, string, string, BytesLike]): string;
 encodeFunctionData(functionFragment: 'registerAsPatient', values: [BytesLike]): string;
-encodeFunctionData(functionFragment: 'rejectDoctor', values: [AddressLike, string]): string;
 encodeFunctionData(functionFragment: 'updatePublicKey', values: [BytesLike]): string;
-encodeFunctionData(functionFragment: 'verifyDoctor', values: [AddressLike]): string;
 
     decodeFunctionResult(functionFragment: 'getDoctorProfile', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'getPendingDoctors', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getPublicKey', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getUserProfile', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getUserRole', data: BytesLike): Result;
@@ -44,48 +40,10 @@ decodeFunctionResult(functionFragment: 'isDoctorVerified', data: BytesLike): Res
 decodeFunctionResult(functionFragment: 'isRegistered', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerAsDoctor', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerAsPatient', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'rejectDoctor', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'updatePublicKey', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'verifyDoctor', data: BytesLike): Result;
   }
 
   
-    export namespace DoctorRegistrationRequestedEvent {
-      export type InputTuple = [doctorAddress: AddressLike, name: string, licenseNumber: string, timestamp: BigNumberish];
-      export type OutputTuple = [doctorAddress: string, name: string, licenseNumber: string, timestamp: bigint];
-      export interface OutputObject {doctorAddress: string, name: string, licenseNumber: string, timestamp: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
-    export namespace DoctorRejectedEvent {
-      export type InputTuple = [doctorAddress: AddressLike, rejectedBy: AddressLike, reason: string, timestamp: BigNumberish];
-      export type OutputTuple = [doctorAddress: string, rejectedBy: string, reason: string, timestamp: bigint];
-      export interface OutputObject {doctorAddress: string, rejectedBy: string, reason: string, timestamp: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
-    export namespace DoctorVerifiedEvent {
-      export type InputTuple = [doctorAddress: AddressLike, verifiedBy: AddressLike, timestamp: BigNumberish];
-      export type OutputTuple = [doctorAddress: string, verifiedBy: string, timestamp: bigint];
-      export interface OutputObject {doctorAddress: string, verifiedBy: string, timestamp: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
     export namespace PublicKeyUpdatedEvent {
       export type InputTuple = [userAddress: AddressLike, timestamp: BigNumberish];
       export type OutputTuple = [userAddress: string, timestamp: bigint];
@@ -152,14 +110,6 @@ decodeFunctionResult(functionFragment: 'verifyDoctor', data: BytesLike): Result;
     
 
     
-    getPendingDoctors: TypedContractMethod<
-      [],
-      [string[]],
-      'view'
-    >
-    
-
-    
     getPublicKey: TypedContractMethod<
       [_user: AddressLike, ],
       [string],
@@ -216,24 +166,8 @@ decodeFunctionResult(functionFragment: 'verifyDoctor', data: BytesLike): Result;
     
 
     
-    rejectDoctor: TypedContractMethod<
-      [_doctorAddress: AddressLike, _reason: string, ],
-      [void],
-      'nonpayable'
-    >
-    
-
-    
     updatePublicKey: TypedContractMethod<
       [_newPublicKey: BytesLike, ],
-      [void],
-      'nonpayable'
-    >
-    
-
-    
-    verifyDoctor: TypedContractMethod<
-      [_doctorAddress: AddressLike, ],
       [void],
       'nonpayable'
     >
@@ -245,11 +179,6 @@ decodeFunctionResult(functionFragment: 'verifyDoctor', data: BytesLike): Result;
     getFunction(nameOrSignature: 'getDoctorProfile'): TypedContractMethod<
       [_doctor: AddressLike, ],
       [IUserRegistry.DoctorProfileStructOutput],
-      'view'
-    >;
-getFunction(nameOrSignature: 'getPendingDoctors'): TypedContractMethod<
-      [],
-      [string[]],
       'view'
     >;
 getFunction(nameOrSignature: 'getPublicKey'): TypedContractMethod<
@@ -287,42 +216,17 @@ getFunction(nameOrSignature: 'registerAsPatient'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
-getFunction(nameOrSignature: 'rejectDoctor'): TypedContractMethod<
-      [_doctorAddress: AddressLike, _reason: string, ],
-      [void],
-      'nonpayable'
-    >;
 getFunction(nameOrSignature: 'updatePublicKey'): TypedContractMethod<
       [_newPublicKey: BytesLike, ],
       [void],
       'nonpayable'
     >;
-getFunction(nameOrSignature: 'verifyDoctor'): TypedContractMethod<
-      [_doctorAddress: AddressLike, ],
-      [void],
-      'nonpayable'
-    >;
 
-    getEvent(key: 'DoctorRegistrationRequested'): TypedContractEvent<DoctorRegistrationRequestedEvent.InputTuple, DoctorRegistrationRequestedEvent.OutputTuple, DoctorRegistrationRequestedEvent.OutputObject>;
-getEvent(key: 'DoctorRejected'): TypedContractEvent<DoctorRejectedEvent.InputTuple, DoctorRejectedEvent.OutputTuple, DoctorRejectedEvent.OutputObject>;
-getEvent(key: 'DoctorVerified'): TypedContractEvent<DoctorVerifiedEvent.InputTuple, DoctorVerifiedEvent.OutputTuple, DoctorVerifiedEvent.OutputObject>;
-getEvent(key: 'PublicKeyUpdated'): TypedContractEvent<PublicKeyUpdatedEvent.InputTuple, PublicKeyUpdatedEvent.OutputTuple, PublicKeyUpdatedEvent.OutputObject>;
+    getEvent(key: 'PublicKeyUpdated'): TypedContractEvent<PublicKeyUpdatedEvent.InputTuple, PublicKeyUpdatedEvent.OutputTuple, PublicKeyUpdatedEvent.OutputObject>;
 getEvent(key: 'UserRegistered'): TypedContractEvent<UserRegisteredEvent.InputTuple, UserRegisteredEvent.OutputTuple, UserRegisteredEvent.OutputObject>;
 
     filters: {
       
-      'DoctorRegistrationRequested(address,string,string,uint256)': TypedContractEvent<DoctorRegistrationRequestedEvent.InputTuple, DoctorRegistrationRequestedEvent.OutputTuple, DoctorRegistrationRequestedEvent.OutputObject>;
-      DoctorRegistrationRequested: TypedContractEvent<DoctorRegistrationRequestedEvent.InputTuple, DoctorRegistrationRequestedEvent.OutputTuple, DoctorRegistrationRequestedEvent.OutputObject>;
-    
-
-      'DoctorRejected(address,address,string,uint256)': TypedContractEvent<DoctorRejectedEvent.InputTuple, DoctorRejectedEvent.OutputTuple, DoctorRejectedEvent.OutputObject>;
-      DoctorRejected: TypedContractEvent<DoctorRejectedEvent.InputTuple, DoctorRejectedEvent.OutputTuple, DoctorRejectedEvent.OutputObject>;
-    
-
-      'DoctorVerified(address,address,uint256)': TypedContractEvent<DoctorVerifiedEvent.InputTuple, DoctorVerifiedEvent.OutputTuple, DoctorVerifiedEvent.OutputObject>;
-      DoctorVerified: TypedContractEvent<DoctorVerifiedEvent.InputTuple, DoctorVerifiedEvent.OutputTuple, DoctorVerifiedEvent.OutputObject>;
-    
-
       'PublicKeyUpdated(address,uint256)': TypedContractEvent<PublicKeyUpdatedEvent.InputTuple, PublicKeyUpdatedEvent.OutputTuple, PublicKeyUpdatedEvent.OutputObject>;
       PublicKeyUpdated: TypedContractEvent<PublicKeyUpdatedEvent.InputTuple, PublicKeyUpdatedEvent.OutputTuple, PublicKeyUpdatedEvent.OutputObject>;
     
