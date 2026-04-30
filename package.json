@@ -10,6 +10,8 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "deploy:local": "npx hardhat run scripts/deploy.ts --network localhost",
+    "check:custodian": "node scripts/check-custodian.js",
+    "pin:custodian": "node scripts/pin-custodian.js",
     "start:dev": "start-dev.bat",
     "start:all": "node scripts/start-dev.js"
   },

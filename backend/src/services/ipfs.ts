@@ -25,7 +25,11 @@ export async function pinToIPFS(
   }
 
   const formData = new FormData();
-  const blob = new Blob([encryptedContent], { type: "application/octet-stream" });
+  const arrayBuffer = encryptedContent.buffer.slice(
+    encryptedContent.byteOffset,
+    encryptedContent.byteOffset + encryptedContent.byteLength
+  ) as ArrayBuffer;
+  const blob = new Blob([arrayBuffer], { type: "application/octet-stream" });
   formData.append("file", blob, fileName);
 
   const metadata = JSON.stringify({ name: fileName });

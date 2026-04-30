@@ -56,7 +56,7 @@ recordsRouter.get(
   "/fetch/:cid",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { cid } = req.params;
+      const cid = Array.isArray(req.params.cid) ? req.params.cid[0] : req.params.cid;
       if (!cid) {
         res.status(400).json({ error: "Missing CID parameter" });
         return;
@@ -82,7 +82,7 @@ recordsRouter.delete(
   "/unpin/:cid",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { cid } = req.params;
+      const cid = Array.isArray(req.params.cid) ? req.params.cid[0] : req.params.cid;
       if (!cid) {
         res.status(400).json({ error: "Missing CID parameter" });
         return;

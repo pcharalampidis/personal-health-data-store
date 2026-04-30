@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { recordsRouter } from "./routes/records.js";
 import { healthRouter } from "./routes/health.js";
+import { custodianRouter } from "./routes/custodian.js";
 
 dotenv.config({ path: "../.env" });
 
@@ -14,6 +15,7 @@ app.use(express.json({ limit: "50mb" }));
 
 app.use("/api/health", healthRouter);
 app.use("/api/records", recordsRouter);
+app.use("/api/custodian", custodianRouter);
 
 app.use(
   (
