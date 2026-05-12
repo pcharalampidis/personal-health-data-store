@@ -8,14 +8,10 @@ import "./interfaces/IAccessControl.sol";
 /**
  * @title AccessControl
  * @notice Manages consent-based access to health records
- * @dev Custom Ownable + ReentrancyGuard (no OpenZeppelin).
- *      Doctors can request access; patients grant/revoke.
- *      Implements lazy expiry: permissions checked at access time.
- *
- * Requirements Covered: FR-011, FR-012, FR-013, FR-016, NFR-008, NFR-009
+ * @dev Doctors can request access; patients grant/revoke.
  */
 contract AccessControl is IAccessControl {
-    // ── Custom Ownable ──────────────────────────────
+
     address public owner;
 
     modifier onlyOwner() {
@@ -23,7 +19,7 @@ contract AccessControl is IAccessControl {
         _;
     }
 
-    // ── Custom ReentrancyGuard ──────────────────────
+    // ──ReentrancyGuard ──────────────────────
     uint256 private constant _NOT_ENTERED = 1;
     uint256 private constant _ENTERED = 2;
     uint256 private _status;

@@ -33,6 +33,7 @@ export interface ProviderValidationResult {
 }
 
 const DEFAULT_REGISTRY_PATH = path.resolve(process.cwd(), "..", "custodian", "providers.json");
+const ENCRYPTION_PUBLIC_KEY_REGEX = /^0x[a-fA-F0-9]{64}$/;
 
 export async function loadProviderRegistry(
   registryPath = process.env.CUSTODIAN_REGISTRY_PATH || DEFAULT_REGISTRY_PATH
@@ -137,7 +138,7 @@ function validateProvider(provider: CustodianProvider): void {
     throw new Error(`Provider ${provider.walletAddress} has invalid status: ${provider.status}`);
   }
 
-  if (!provider.encryptionPublicKey || !provider.encryptionPublicKey.startsWith("0x")) {
+  if (!provider.encryptionPublicKey || !ENCRYPTION_PUBLIC_KEY_REGEX.test(provider.encryptionPublicKey)) {
     throw new Error(`Provider ${provider.walletAddress} has invalid encryptionPublicKey`);
   }
 }

@@ -15,11 +15,14 @@ timeout /t 2 /nobreak >nul
 echo     Done cleaning
 echo.
 
-:: Step 1: Start Hardhat node
-echo [1/5] Starting Hardhat node...
+:: Step 1: Compile Contracts and Start Hardhat node
+echo [1/5] Compiling contracts...
+call npx hardhat compile
+echo.
+echo Starting Hardhat node...
 start "Hardhat Node" cmd /k "npx hardhat node"
-echo     Waiting 15 seconds for node to start...
-timeout /t 15 /nobreak >nul
+echo     Waiting 10 seconds for node to start...
+timeout /t 10 /nobreak >nul
 echo     Hardhat node should be running!
 echo.
 

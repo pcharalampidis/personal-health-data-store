@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import { recordsRouter } from "./routes/records.js";
 import { healthRouter } from "./routes/health.js";
 import { custodianRouter } from "./routes/custodian.js";
+import { emergencyRouter } from "./routes/emergency.js";
+import { initializeEmergencyService, startEventListener } from "./services/emergency.js";
 
 dotenv.config({ path: "../.env" });
 
@@ -16,6 +18,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use("/api/health", healthRouter);
 app.use("/api/records", recordsRouter);
 app.use("/api/custodian", custodianRouter);
+app.use("/api/emergency", emergencyRouter);
 
 app.use(
   (
@@ -29,8 +32,14 @@ app.use(
   }
 );
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Backend running on http://localhost:${PORT}`);
+
+  const emergencyInitialized = await initializeEmergencyService();
+  if (emergencyInitialized && process.env.AUTO_START_EMERGENCY_LISTENER === "true") {
+    await startEventListener();
+    console.log("Emergency event listener auto-started");
+  }
 });
 
 export default app;

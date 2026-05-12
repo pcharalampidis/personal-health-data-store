@@ -5,9 +5,10 @@ import { getUserRegistryContract } from "../services/contracts.js";
 interface Props {
   signer: JsonRpcSigner;
   account: string;
+  onRegistered?: () => void;
 }
 
-export function Register({ signer, account }: Props) {
+export function Register({ signer, account, onRegistered }: Props) {
   const [role, setRole] = useState<"patient" | "doctor">("patient");
   const [status, setStatus] = useState("");
   const [registering, setRegistering] = useState(false);
@@ -24,14 +25,13 @@ export function Register({ signer, account }: Props) {
       const userRegistry = getUserRegistryContract(signer);
 
       if (role === "patient") {
-        // Generate a random public key for demo (in real app, this would be user's encryption public key)
         const mockPublicKey = "0x" + "ab".repeat(32);
         setStatus("Registering as patient...");
         const tx = await userRegistry.registerAsPatient(mockPublicKey);
         await tx.wait();
         setStatus("✅ Registered as patient successfully!");
+        onRegistered?.();
       } else {
-        // Validate doctor fields
         if (!name || !license || !specialty || !institution) {
           setStatus("Please fill all doctor fields");
           setRegistering(false);
@@ -44,6 +44,7 @@ export function Register({ signer, account }: Props) {
         );
         await tx.wait();
         setStatus("✅ Registered as doctor successfully!");
+        onRegistered?.();
       }
     } catch (err: any) {
       setStatus(`❌ Error: ${err.message || err.reason || "Unknown error"}`);
@@ -130,63 +131,71 @@ export function Register({ signer, account }: Props) {
 
 const styles: Record<string, React.CSSProperties> = {
   card: {
-    padding: "1.25rem",
-    borderRadius: 10,
-    border: "1px solid #e0e0e0",
-    background: "#fafafa",
+    padding: "var(--space-md)",
+    borderRadius: "var(--radius-lg)",
+    border: "1px solid var(--color-border)",
+    background: "var(--color-bg-secondary)",
   },
   heading: {
-    margin: "0 0 1rem",
-    fontSize: "1.1rem",
+    margin: "0 0 var(--space-md)",
+    fontSize: "var(--font-lg)",
     fontWeight: 600,
   },
   roleSelect: {
-    marginBottom: "1rem",
+    marginBottom: "var(--space-md)",
   },
   label: {
     display: "block",
-    marginBottom: "0.5rem",
-    fontSize: "0.9rem",
+    marginBottom: "var(--space-sm)",
+    fontSize: "var(--font-base)",
     fontWeight: 500,
   },
   radioGroup: {
     display: "flex",
-    gap: "1.5rem",
+    flexWrap: "wrap",
+    gap: "var(--space-md)",
   },
   radioLabel: {
     display: "flex",
     alignItems: "center",
-    gap: "0.5rem",
-    fontSize: "0.9rem",
+    gap: "var(--space-sm)",
+    fontSize: "var(--font-base)",
     cursor: "pointer",
+    minHeight: "var(--touch-target)",
+    padding: "var(--space-xs) 0",
   },
   doctorFields: {
     display: "flex",
     flexDirection: "column",
-    gap: "0.5rem",
-    marginBottom: "1rem",
+    gap: "var(--space-sm)",
+    marginBottom: "var(--space-md)",
   },
   input: {
-    padding: "0.5rem",
-    borderRadius: 6,
-    border: "1px solid #ccc",
-    fontSize: "0.9rem",
+    padding: "var(--space-sm)",
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--color-border)",
+    fontSize: "var(--font-base)",
+    minHeight: "var(--touch-target)",
+    width: "100%",
   },
   btn: {
-    padding: "0.6rem 1.5rem",
+    padding: "var(--space-sm) var(--space-lg)",
     border: "none",
-    borderRadius: 6,
-    background: "#4caf50",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-success)",
     color: "#fff",
     cursor: "pointer",
-    fontSize: "0.95rem",
+    fontSize: "var(--font-base)",
     fontWeight: 600,
+    minHeight: "var(--touch-target)",
+    width: "100%",
   },
   status: {
-    marginTop: "0.75rem",
-    padding: "0.5rem",
-    background: "#f0f4ff",
-    borderRadius: 6,
-    fontSize: "0.85rem",
+    marginTop: "var(--space-sm)",
+    padding: "var(--space-sm)",
+    background: "var(--color-info-bg)",
+    borderRadius: "var(--radius-md)",
+    fontSize: "var(--font-sm)",
+    wordBreak: "break-word",
   },
 };
