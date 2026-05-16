@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
 import { isAddress } from "ethers";
 import { usePermissions } from "../hooks/usePermissions.js";
-import { RECORD_TYPES } from "../services/contracts.js";
+import { RECORD_TYPES, getRecordManagerContract, getUserRegistryContract } from "../services/contracts.js";
+import { fromHex, toHex } from "../utils/encryption.js";
+import { importPublicKeyJWK, importPrivateKeyJWK, wrapAESKey, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
 
 interface RecordInfo {
   recordId: bigint;
@@ -60,9 +62,28 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
 
       const recordId = BigInt(selectedRecord);
       const expiresAt = BigInt(Math.floor(Date.now() / 1000) + days * 24 * 60 * 60);
-      const placeholderKey = "0x00";
 
-      const success = await grantAccess(recordId, doctorAddress, expiresAt, placeholderKey);
+      // Unwrap patient's AES key
+      const recordManager = getRecordManagerContract(signer);
+      const patientWrappedHex: string = await recordManager.getEncryptedKey(recordId, account);
+      const privJwk = getStoredPrivateKeyJWK(account);
+      if (!privJwk) {
+        setLocalError("Private key not found in browser. Re-register to generate keys.");
+        setProcessing(false);
+        return;
+      }
+      const rsaPrivKey = await importPrivateKeyJWK(privJwk);
+      const aesKey = await unwrapAESKey(fromHex(patientWrappedHex), rsaPrivKey);
+
+      // Wrap for doctor
+      const userRegistry = getUserRegistryContract(signer);
+      const doctorPubHex: string = await userRegistry.getPublicKey(doctorAddress);
+      const doctorPubJson = new TextDecoder().decode(fromHex(doctorPubHex));
+      const doctorRsaPub = await importPublicKeyJWK(doctorPubJson);
+      const doctorWrapped = await wrapAESKey(aesKey, doctorRsaPub);
+      const doctorWrappedHex = toHex(doctorWrapped);
+
+      const success = await grantAccess(recordId, doctorAddress, expiresAt, doctorWrappedHex);
 
       if (success) {
         setSuccess(`Access granted to ${doctorAddress.slice(0, 10)}... for ${days} days`);

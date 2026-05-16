@@ -684,4 +684,90 @@ describe("EmergencyAccess (Hybrid Model)", function () {
       ).to.be.revertedWith("EmergencyAccess: not session doctor");
     });
   });
+
+  // ══════════════════════════════════════════════════
+  // CUSTODIAN EMERGENCY KEY STORAGE
+  // ══════════════════════════════════════════════════
+
+  describe("Custodian Emergency Key Storage", function () {
+    const CUSTODIAN_WRAPPED_KEY = "0xffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100";
+
+    beforeEach(async function () {
+      const fixture = await setupWithEmergencyRecordFixture();
+      userRegistry = fixture.registry;
+      recordManager = fixture.records;
+      emergencyAccess = fixture.emergency;
+    });
+
+    it("should allow patient to store custodian-wrapped emergency keys", async function () {
+      const tx = emergencyAccess.connect(patient1).storeCustodianEmergencyKeys(
+        [1n],
+        [CUSTODIAN_WRAPPED_KEY]
+      );
+
+      await expect(tx)
+        .to.emit(emergencyAccess, "CustodianEmergencyKeysStored")
+        .withArgs(patient1.address, 1n, (t: bigint) => t > 0n);
+    });
+
+    it("should allow owner to read custodian emergency key", async function () {
+      await emergencyAccess.connect(patient1).storeCustodianEmergencyKeys(
+        [1n],
+        [CUSTODIAN_WRAPPED_KEY]
+      );
+
+      const key = await emergencyAccess.connect(owner).getCustodianEmergencyKey(patient1.address, 1n);
+      expect(key).to.equal(CUSTODIAN_WRAPPED_KEY);
+    });
+
+    it("should reject non-owner reading custodian emergency key", async function () {
+      await emergencyAccess.connect(patient1).storeCustodianEmergencyKeys(
+        [1n],
+        [CUSTODIAN_WRAPPED_KEY]
+      );
+
+      await expect(
+        emergencyAccess.connect(doctor1).getCustodianEmergencyKey(patient1.address, 1n)
+      ).to.be.revertedWith("EmergencyAccess: caller is not the Custodian");
+    });
+
+    it("should reject non-patient storing custodian keys", async function () {
+      await expect(
+        emergencyAccess.connect(doctor1).storeCustodianEmergencyKeys([1n], [CUSTODIAN_WRAPPED_KEY])
+      ).to.be.revertedWith("EmergencyAccess: caller is not a patient");
+    });
+
+    it("should reject length mismatch", async function () {
+      await expect(
+        emergencyAccess.connect(patient1).storeCustodianEmergencyKeys([1n], [CUSTODIAN_WRAPPED_KEY, CUSTODIAN_WRAPPED_KEY])
+      ).to.be.revertedWith("EmergencyAccess: length mismatch");
+    });
+
+    it("should reject storing keys for non-emergency record", async function () {
+      // Add a non-emergency record
+      await recordManager.connect(patient1).addRecord(SAMPLE_CID, SAMPLE_HASH, 1, SAMPLE_ENCRYPTED_KEY);
+
+      await expect(
+        emergencyAccess.connect(patient1).storeCustodianEmergencyKeys([2n], [CUSTODIAN_WRAPPED_KEY])
+      ).to.be.revertedWith("EmergencyAccess: record not emergency");
+    });
+
+    it("should reject storing keys for record not owned by caller", async function () {
+      // patient2 is already registered (via setupWithEmergencyRecordFixture)
+      // patient2 tries to store keys for patient1's record
+      await expect(
+        emergencyAccess.connect(patient2).storeCustodianEmergencyKeys([1n], [CUSTODIAN_WRAPPED_KEY])
+      ).to.be.revertedWith("EmergencyAccess: not record owner");
+    });
+
+    it("should allow overwriting custodian keys for same record", async function () {
+      const NEW_KEY = "0x0011223344556677889900112233445566778899001122334455667788990011";
+
+      await emergencyAccess.connect(patient1).storeCustodianEmergencyKeys([1n], [CUSTODIAN_WRAPPED_KEY]);
+      await emergencyAccess.connect(patient1).storeCustodianEmergencyKeys([1n], [NEW_KEY]);
+
+      const key = await emergencyAccess.connect(owner).getCustodianEmergencyKey(patient1.address, 1n);
+      expect(key).to.equal(NEW_KEY);
+    });
+  });
 });

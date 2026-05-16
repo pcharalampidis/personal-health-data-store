@@ -1,5 +1,6 @@
 import { Contract, JsonRpcProvider, Wallet, randomBytes, hexlify } from "ethers";
 import { validateProviderWallet } from "./custodian.js";
+import { unwrapWithCustodianKey, wrapForDoctor } from "../utils/keyWrapping.js";
 
 const EMERGENCY_ACCESS_ABI = [
   "function owner() view returns (address)",
@@ -7,9 +8,18 @@ const EMERGENCY_ACCESS_ABI = [
   "function getSession(uint256 _sessionId) view returns (tuple(uint256 sessionId, address patient, address doctor, uint8 status, uint8 triggerType, uint256 triggeredAt, uint256 activatedAt, uint256 expiresAt, bytes encryptedOTP, uint256 recordsAccessed))",
   "function issueEmergencyOTP(uint256 _sessionId, bytes calldata _encryptedOTP, uint256 _sessionDuration) external",
   "function rejectEmergencyRequest(uint256 _sessionId) external",
+  "function getCustodianEmergencyKey(address patient, uint256 recordId) external view returns (bytes)",
   "event EmergencyAccessTriggered(uint256 indexed sessionId, address indexed patient, address indexed doctor, uint8 triggerType, uint256 timestamp)",
   "event EmergencyOTPIssued(uint256 indexed sessionId, address indexed patient, address indexed doctor, uint256 expiresAt, uint256 timestamp)",
   "event EmergencySessionExpired(uint256 indexed sessionId, uint256 timestamp)",
+];
+
+const RECORD_MANAGER_ABI = [
+  "function getEmergencyRecords(address _owner) view returns (uint256[])",
+];
+
+const USER_REGISTRY_ABI = [
+  "function getPublicKey(address _user) view returns (bytes)",
 ];
 
 export interface EmergencySession {
@@ -51,17 +61,21 @@ const DEFAULT_SESSION_DURATION = 24 * 60 * 60; // 24 hours in seconds
 let provider: JsonRpcProvider | null = null;
 let custodianWallet: Wallet | null = null;
 let emergencyContract: Contract | null = null;
+let recordManagerContract: Contract | null = null;
+let userRegistryContract: Contract | null = null;
 
 export function getEmergencyConfig() {
   const rpcUrl = process.env.RPC_URL || "http://127.0.0.1:8545";
   const emergencyAccessAddress = process.env.EMERGENCY_ACCESS_ADDRESS;
   const custodianPrivateKey = process.env.CUSTODIAN_PRIVATE_KEY;
+  const recordManagerAddress = process.env.RECORD_MANAGER_ADDRESS;
+  const userRegistryAddress = process.env.USER_REGISTRY_ADDRESS;
 
-  return { rpcUrl, emergencyAccessAddress, custodianPrivateKey };
+  return { rpcUrl, emergencyAccessAddress, custodianPrivateKey, recordManagerAddress, userRegistryAddress };
 }
 
 export async function initializeEmergencyService(): Promise<boolean> {
-  const { rpcUrl, emergencyAccessAddress, custodianPrivateKey } = getEmergencyConfig();
+  const { rpcUrl, emergencyAccessAddress, custodianPrivateKey, recordManagerAddress, userRegistryAddress } = getEmergencyConfig();
 
   if (!emergencyAccessAddress) {
     console.warn("EMERGENCY_ACCESS_ADDRESS not set - emergency service disabled");
@@ -91,6 +105,14 @@ export async function initializeEmergencyService(): Promise<boolean> {
       }
     } else {
       emergencyContract = new Contract(emergencyAccessAddress, EMERGENCY_ACCESS_ABI, provider);
+    }
+
+    // Initialize additional contracts for key re-wrapping
+    if (recordManagerAddress) {
+      recordManagerContract = new Contract(recordManagerAddress, RECORD_MANAGER_ABI, provider);
+    }
+    if (userRegistryAddress) {
+      userRegistryContract = new Contract(userRegistryAddress, USER_REGISTRY_ABI, provider);
     }
 
     console.log("Emergency service initialized");
@@ -170,12 +192,51 @@ export async function processSession(sessionId: bigint): Promise<ProcessResult> 
   const validation = await validateProviderWallet(session.doctor);
 
   if (validation.isRecognized && validation.isActive) {
-    const otp = generateOTP();
-    const encryptedOTP = hexlify(otp);
+    // Build emergency package with re-wrapped keys
+    let packageHex: string;
+
+    if (recordManagerContract && userRegistryContract) {
+      try {
+        // Get emergency records for patient
+        const emergencyRecordIds: bigint[] = await recordManagerContract.getEmergencyRecords(session.patient);
+
+        // Get doctor's public key for wrapping
+        const doctorPubKeyHex: string = await userRegistryContract.getPublicKey(session.doctor);
+
+        // Re-wrap each emergency key for the doctor
+        const records: { recordId: string; doctorWrappedKey: string }[] = [];
+        for (const recordId of emergencyRecordIds) {
+          const custodianWrappedHex: string = await emergencyContract.getCustodianEmergencyKey(session.patient, recordId);
+          if (custodianWrappedHex && custodianWrappedHex !== "0x") {
+            const aesKey = await unwrapWithCustodianKey(custodianWrappedHex);
+            const doctorWrappedKey = await wrapForDoctor(aesKey, doctorPubKeyHex);
+            records.push({ recordId: String(recordId), doctorWrappedKey });
+          }
+        }
+
+        const emergencyPackage = {
+          type: "custodian-emergency-key-package",
+          version: 1,
+          sessionId: String(sessionId),
+          patient: session.patient,
+          doctor: session.doctor,
+          records,
+          otp: hexlify(generateOTP()),
+        };
+
+        packageHex = hexlify(new TextEncoder().encode(JSON.stringify(emergencyPackage)));
+      } catch (err) {
+        console.error("[Emergency] Key re-wrapping failed, falling back to OTP-only:", err);
+        packageHex = hexlify(generateOTP());
+      }
+    } else {
+      // No RecordManager/UserRegistry configured — fallback to OTP only
+      packageHex = hexlify(generateOTP());
+    }
 
     const tx = await emergencyContract.issueEmergencyOTP(
       sessionId,
-      encryptedOTP,
+      packageHex,
       DEFAULT_SESSION_DURATION
     );
     const receipt = await tx.wait();

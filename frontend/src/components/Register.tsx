@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { JsonRpcSigner } from "ethers";
 import { getUserRegistryContract } from "../services/contracts.js";
+import { ensureRSAKeyPair } from "../utils/rsaKeys.js";
 
 interface Props {
   signer: JsonRpcSigner;
@@ -25,9 +26,10 @@ export function Register({ signer, account, onRegistered }: Props) {
       const userRegistry = getUserRegistryContract(signer);
 
       if (role === "patient") {
-        const mockPublicKey = "0x" + "ab".repeat(32);
+        setStatus("Generating encryption keys...");
+        const { publicKeyHex } = await ensureRSAKeyPair(account);
         setStatus("Registering as patient...");
-        const tx = await userRegistry.registerAsPatient(mockPublicKey);
+        const tx = await userRegistry.registerAsPatient(publicKeyHex);
         await tx.wait();
         setStatus("✅ Registered as patient successfully!");
         onRegistered?.();
@@ -37,10 +39,10 @@ export function Register({ signer, account, onRegistered }: Props) {
           setRegistering(false);
           return;
         }
-        const mockPublicKey = "0x" + "cd".repeat(32);
+        const { publicKeyHex } = await ensureRSAKeyPair(account);
         setStatus("Registering as doctor...");
         const tx = await userRegistry.registerAsDoctor(
-          name, license, specialty, institution, mockPublicKey
+          name, license, specialty, institution, publicKeyHex
         );
         await tx.wait();
         setStatus("✅ Registered as doctor successfully!");

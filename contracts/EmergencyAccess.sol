@@ -72,6 +72,10 @@ contract EmergencyAccess is IEmergencyAccess {
     // emergencyKeys[patient][contact][recordId] = encryptedKey
     mapping(address => mapping(address => mapping(uint256 => bytes))) private emergencyKeys;
 
+    // ── Storage: Custodian Emergency Keys ───────────
+    // custodianEmergencyKeys[patient][recordId] = AES key wrapped for Custodian
+    mapping(address => mapping(uint256 => bytes)) private custodianEmergencyKeys;
+
     // ── Constants ───────────────────────────────────
     uint256 public constant MIN_SESSION_DURATION = 1 hours;
     uint256 public constant MAX_SESSION_DURATION = 72 hours;
@@ -492,6 +496,34 @@ contract EmergencyAccess is IEmergencyAccess {
                 break;
             }
         }
+    }
+
+    // ══════════════════════════════════════════════════
+    // CUSTODIAN EMERGENCY KEY STORAGE
+    // ══════════════════════════════════════════════════
+
+    function storeCustodianEmergencyKeys(
+        uint256[] calldata recordIds,
+        bytes[] calldata wrappedKeys
+    ) external onlyPatient nonReentrant {
+        require(recordIds.length == wrappedKeys.length, "EmergencyAccess: length mismatch");
+
+        for (uint256 i = 0; i < recordIds.length; i++) {
+            IRecordManager.HealthRecord memory record = recordManager.getRecord(recordIds[i]);
+            require(record.owner == msg.sender, "EmergencyAccess: not record owner");
+            require(record.isEmergency, "EmergencyAccess: record not emergency");
+            require(wrappedKeys[i].length > 0, "EmergencyAccess: empty key");
+            custodianEmergencyKeys[msg.sender][recordIds[i]] = wrappedKeys[i];
+        }
+
+        emit CustodianEmergencyKeysStored(msg.sender, recordIds.length, block.timestamp);
+    }
+
+    function getCustodianEmergencyKey(
+        address patient,
+        uint256 recordId
+    ) external view onlyOwner returns (bytes memory) {
+        return custodianEmergencyKeys[patient][recordId];
     }
 
     // ══════════════════════════════════════════════════

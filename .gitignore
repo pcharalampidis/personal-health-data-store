@@ -8,6 +8,9 @@ typechain-types/
 .env
 .env.local
 
+# Custodian keys (sensitive)
+backend/custodian/
+
 # IDE
 .vscode/
 .idea/

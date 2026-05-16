@@ -5,7 +5,9 @@ import {
   type AccessRequest,
   type Permission,
 } from "../hooks/usePermissions.js";
-import { RECORD_TYPES } from "../services/contracts.js";
+import { RECORD_TYPES, getRecordManagerContract, getUserRegistryContract } from "../services/contracts.js";
+import { fromHex, toHex } from "../utils/encryption.js";
+import { importPublicKeyJWK, importPrivateKeyJWK, wrapAESKey, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
 
 interface Props {
   account: string;
@@ -59,14 +61,39 @@ export function PermissionManager({ account, provider, signer, records }: Props)
     return () => clearInterval(interval);
   }, []);
 
+  const wrapKeysForDoctor = async (recordIds: bigint[], doctorAddress: string): Promise<string[]> => {
+    const privJwk = getStoredPrivateKeyJWK(account);
+    if (!privJwk) throw new Error("Private key not found. Re-register to generate keys.");
+    const rsaPrivKey = await importPrivateKeyJWK(privJwk);
+
+    const recordManager = getRecordManagerContract(signer);
+    const userRegistry = getUserRegistryContract(signer);
+    const doctorPubHex: string = await userRegistry.getPublicKey(doctorAddress);
+    const doctorPubJson = new TextDecoder().decode(fromHex(doctorPubHex));
+    const doctorRsaPub = await importPublicKeyJWK(doctorPubJson);
+
+    const wrappedKeys: string[] = [];
+    for (const recordId of recordIds) {
+      const patientWrappedHex: string = await recordManager.getEncryptedKey(recordId, account);
+      const aesKey = await unwrapAESKey(fromHex(patientWrappedHex), rsaPrivKey);
+      const doctorWrapped = await wrapAESKey(aesKey, doctorRsaPub);
+      wrappedKeys.push(toHex(doctorWrapped));
+    }
+    return wrappedKeys;
+  };
+
   const handleApprove = async (request: AccessRequest) => {
     const id = String(request.requestId);
     setProcessingId(id);
 
-    const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
-    const placeholderKeys = request.recordIds.map(() => "0x00");
+    try {
+      const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
+      const encryptedKeys = await wrapKeysForDoctor(request.recordIds, request.doctor);
+      await approveRequest(request.requestId, expiresAt, encryptedKeys);
+    } catch (err) {
+      console.error("Approve failed:", err);
+    }
 
-    await approveRequest(request.requestId, expiresAt, placeholderKeys);
     setProcessingId(null);
     setSelectedRequests((prev) => {
       const next = new Set(prev);
@@ -116,9 +143,13 @@ export function PermissionManager({ account, provider, signer, records }: Props)
     const selected = pendingRequests.filter((r) => selectedRequests.has(String(r.requestId)));
 
     for (const request of selected) {
-      const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
-      const placeholderKeys = request.recordIds.map(() => "0x00");
-      await approveRequest(request.requestId, expiresAt, placeholderKeys);
+      try {
+        const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60);
+        const encryptedKeys = await wrapKeysForDoctor(request.recordIds, request.doctor);
+        await approveRequest(request.requestId, expiresAt, encryptedKeys);
+      } catch (err) {
+        console.error(`Batch approve failed for request #${request.requestId}:`, err);
+      }
     }
 
     setSelectedRequests(new Set());

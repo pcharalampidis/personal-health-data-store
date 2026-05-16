@@ -18,12 +18,13 @@ export declare namespace IEmergencyAccess {
     }
 
   export interface IEmergencyAccessInterface extends Interface {
-    getFunction(nameOrSignature: "configureEmergencyAccess" | "consumeEmergencyAccess" | "getEmergencyConfig" | "getEmergencyKey" | "getPendingSessions" | "getSession" | "getSessionCount" | "getSessionsByDoctor" | "getSessionsByPatient" | "hasActiveSession" | "hasPendingSession" | "isEmergencyContact" | "issueEmergencyOTP" | "logEmergencyRecordAccess" | "rejectEmergencyRequest" | "revokeEmergencySession" | "storeEmergencyKeys" | "triggerEmergencyAccess" | "updateEmergencyContacts"): FunctionFragment;
+    getFunction(nameOrSignature: "configureEmergencyAccess" | "consumeEmergencyAccess" | "getCustodianEmergencyKey" | "getEmergencyConfig" | "getEmergencyKey" | "getPendingSessions" | "getSession" | "getSessionCount" | "getSessionsByDoctor" | "getSessionsByPatient" | "hasActiveSession" | "hasPendingSession" | "isEmergencyContact" | "issueEmergencyOTP" | "logEmergencyRecordAccess" | "rejectEmergencyRequest" | "revokeEmergencySession" | "storeCustodianEmergencyKeys" | "storeEmergencyKeys" | "triggerEmergencyAccess" | "updateEmergencyContacts"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "EmergencyAccessTriggered" | "EmergencyConfigured" | "EmergencyContactsUpdated" | "EmergencyKeysStored" | "EmergencyOTPConsumed" | "EmergencyOTPIssued" | "EmergencyRecordAccessed" | "EmergencySessionExpired" | "EmergencySessionRevoked"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "CustodianEmergencyKeysStored" | "EmergencyAccessTriggered" | "EmergencyConfigured" | "EmergencyContactsUpdated" | "EmergencyKeysStored" | "EmergencyOTPConsumed" | "EmergencyOTPIssued" | "EmergencyRecordAccessed" | "EmergencySessionExpired" | "EmergencySessionRevoked"): EventFragment;
 
     encodeFunctionData(functionFragment: 'configureEmergencyAccess', values: [AddressLike[], BigNumberish]): string;
 encodeFunctionData(functionFragment: 'consumeEmergencyAccess', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getCustodianEmergencyKey', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getEmergencyConfig', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getEmergencyKey', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getPendingSessions', values?: undefined): string;
@@ -38,12 +39,14 @@ encodeFunctionData(functionFragment: 'issueEmergencyOTP', values: [BigNumberish,
 encodeFunctionData(functionFragment: 'logEmergencyRecordAccess', values: [BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'rejectEmergencyRequest', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'revokeEmergencySession', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'storeCustodianEmergencyKeys', values: [BigNumberish[], BytesLike[]]): string;
 encodeFunctionData(functionFragment: 'storeEmergencyKeys', values: [BigNumberish[], AddressLike[], BytesLike[]]): string;
 encodeFunctionData(functionFragment: 'triggerEmergencyAccess', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'updateEmergencyContacts', values: [AddressLike[]]): string;
 
     decodeFunctionResult(functionFragment: 'configureEmergencyAccess', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'consumeEmergencyAccess', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getCustodianEmergencyKey', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getEmergencyConfig', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getEmergencyKey', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getPendingSessions', data: BytesLike): Result;
@@ -58,12 +61,25 @@ decodeFunctionResult(functionFragment: 'issueEmergencyOTP', data: BytesLike): Re
 decodeFunctionResult(functionFragment: 'logEmergencyRecordAccess', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'rejectEmergencyRequest', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'revokeEmergencySession', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'storeCustodianEmergencyKeys', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'storeEmergencyKeys', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'triggerEmergencyAccess', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'updateEmergencyContacts', data: BytesLike): Result;
   }
 
   
+    export namespace CustodianEmergencyKeysStoredEvent {
+      export type InputTuple = [patient: AddressLike, recordCount: BigNumberish, timestamp: BigNumberish];
+      export type OutputTuple = [patient: string, recordCount: bigint, timestamp: bigint];
+      export interface OutputObject {patient: string, recordCount: bigint, timestamp: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace EmergencyAccessTriggeredEvent {
       export type InputTuple = [sessionId: BigNumberish, patient: AddressLike, doctor: AddressLike, triggerType: BigNumberish, timestamp: BigNumberish];
       export type OutputTuple = [sessionId: bigint, patient: string, doctor: string, triggerType: bigint, timestamp: bigint];
@@ -222,6 +238,14 @@ decodeFunctionResult(functionFragment: 'updateEmergencyContacts', data: BytesLik
     
 
     
+    getCustodianEmergencyKey: TypedContractMethod<
+      [patient: AddressLike, recordId: BigNumberish, ],
+      [string],
+      'view'
+    >
+    
+
+    
     getEmergencyConfig: TypedContractMethod<
       [_patient: AddressLike, ],
       [IEmergencyAccess.EmergencyConfigStructOutput],
@@ -334,6 +358,14 @@ decodeFunctionResult(functionFragment: 'updateEmergencyContacts', data: BytesLik
     
 
     
+    storeCustodianEmergencyKeys: TypedContractMethod<
+      [recordIds: BigNumberish[], wrappedKeys: BytesLike[], ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     storeEmergencyKeys: TypedContractMethod<
       [_recordIds: BigNumberish[], _contacts: AddressLike[], _encryptedKeys: BytesLike[], ],
       [void],
@@ -369,6 +401,11 @@ getFunction(nameOrSignature: 'consumeEmergencyAccess'): TypedContractMethod<
       [_sessionId: BigNumberish, ],
       [[string, bigint[]] & {encryptedData: string, recordIds: bigint[] }],
       'nonpayable'
+    >;
+getFunction(nameOrSignature: 'getCustodianEmergencyKey'): TypedContractMethod<
+      [patient: AddressLike, recordId: BigNumberish, ],
+      [string],
+      'view'
     >;
 getFunction(nameOrSignature: 'getEmergencyConfig'): TypedContractMethod<
       [_patient: AddressLike, ],
@@ -440,6 +477,11 @@ getFunction(nameOrSignature: 'revokeEmergencySession'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'storeCustodianEmergencyKeys'): TypedContractMethod<
+      [recordIds: BigNumberish[], wrappedKeys: BytesLike[], ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'storeEmergencyKeys'): TypedContractMethod<
       [_recordIds: BigNumberish[], _contacts: AddressLike[], _encryptedKeys: BytesLike[], ],
       [void],
@@ -456,7 +498,8 @@ getFunction(nameOrSignature: 'updateEmergencyContacts'): TypedContractMethod<
       'nonpayable'
     >;
 
-    getEvent(key: 'EmergencyAccessTriggered'): TypedContractEvent<EmergencyAccessTriggeredEvent.InputTuple, EmergencyAccessTriggeredEvent.OutputTuple, EmergencyAccessTriggeredEvent.OutputObject>;
+    getEvent(key: 'CustodianEmergencyKeysStored'): TypedContractEvent<CustodianEmergencyKeysStoredEvent.InputTuple, CustodianEmergencyKeysStoredEvent.OutputTuple, CustodianEmergencyKeysStoredEvent.OutputObject>;
+getEvent(key: 'EmergencyAccessTriggered'): TypedContractEvent<EmergencyAccessTriggeredEvent.InputTuple, EmergencyAccessTriggeredEvent.OutputTuple, EmergencyAccessTriggeredEvent.OutputObject>;
 getEvent(key: 'EmergencyConfigured'): TypedContractEvent<EmergencyConfiguredEvent.InputTuple, EmergencyConfiguredEvent.OutputTuple, EmergencyConfiguredEvent.OutputObject>;
 getEvent(key: 'EmergencyContactsUpdated'): TypedContractEvent<EmergencyContactsUpdatedEvent.InputTuple, EmergencyContactsUpdatedEvent.OutputTuple, EmergencyContactsUpdatedEvent.OutputObject>;
 getEvent(key: 'EmergencyKeysStored'): TypedContractEvent<EmergencyKeysStoredEvent.InputTuple, EmergencyKeysStoredEvent.OutputTuple, EmergencyKeysStoredEvent.OutputObject>;
@@ -468,6 +511,10 @@ getEvent(key: 'EmergencySessionRevoked'): TypedContractEvent<EmergencySessionRev
 
     filters: {
       
+      'CustodianEmergencyKeysStored(address,uint256,uint256)': TypedContractEvent<CustodianEmergencyKeysStoredEvent.InputTuple, CustodianEmergencyKeysStoredEvent.OutputTuple, CustodianEmergencyKeysStoredEvent.OutputObject>;
+      CustodianEmergencyKeysStored: TypedContractEvent<CustodianEmergencyKeysStoredEvent.InputTuple, CustodianEmergencyKeysStoredEvent.OutputTuple, CustodianEmergencyKeysStoredEvent.OutputObject>;
+    
+
       'EmergencyAccessTriggered(uint256,address,address,uint8,uint256)': TypedContractEvent<EmergencyAccessTriggeredEvent.InputTuple, EmergencyAccessTriggeredEvent.OutputTuple, EmergencyAccessTriggeredEvent.OutputObject>;
       EmergencyAccessTriggered: TypedContractEvent<EmergencyAccessTriggeredEvent.InputTuple, EmergencyAccessTriggeredEvent.OutputTuple, EmergencyAccessTriggeredEvent.OutputObject>;
     

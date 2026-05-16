@@ -2,14 +2,15 @@ import React, { useState, useRef } from "react";
 import type { JsonRpcSigner } from "ethers";
 import {
   generateAESKey,
-  exportKey,
   encryptFile,
   packageEncrypted,
   hashContent,
   toHex,
   toBase64,
+  fromHex,
 } from "../utils/encryption.js";
-import { getRecordManagerContract, RECORD_TYPES } from "../services/contracts.js";
+import { importPublicKeyJWK, wrapAESKey } from "../utils/rsaKeys.js";
+import { getRecordManagerContract, getUserRegistryContract, RECORD_TYPES } from "../services/contracts.js";
 
 interface Props {
   signer: JsonRpcSigner;
@@ -50,12 +51,17 @@ export function UploadRecord({ signer, onUploaded }: Props) {
       
       setDebugInfo({ step: "hashing", originalSize: arrayBuffer.byteLength, encryptedSize: packaged.length });
       
-      console.log("[4/6] Computing hash...");
+      console.log("[4/6] Computing hash & wrapping key...");
       const contentHash = await hashContent(packaged);
       console.log("   Hash:", contentHash.slice(0, 20) + "...");
       
-      const rawKey = await exportKey(aesKey);
-      const encryptedKeyHex = toHex(rawKey);
+      const userRegistry = getUserRegistryContract(signer);
+      const pubKeyHex = await userRegistry.getPublicKey(await signer.getAddress());
+      const pubKeyJson = new TextDecoder().decode(fromHex(pubKeyHex));
+      const rsaPubKey = await importPublicKeyJWK(pubKeyJson);
+      const wrappedKey = await wrapAESKey(aesKey, rsaPubKey);
+      const encryptedKeyHex = toHex(wrappedKey);
+      console.log("   AES key wrapped with RSA-OAEP");
       
       setStatus("Uploading to IPFS...");
       setDebugInfo({ step: "uploading_ipfs", originalSize: arrayBuffer.byteLength, encryptedSize: packaged.length, contentHash });

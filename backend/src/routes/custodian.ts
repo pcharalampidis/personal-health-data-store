@@ -3,8 +3,25 @@ import {
   loadProviderRegistry,
   validateProviderWallet,
 } from "../services/custodian.js";
+import { getCustodianPublicKeyHex } from "../utils/keyWrapping.js";
 
 export const custodianRouter = Router();
+
+/**
+ * GET /api/custodian/public-key
+ * Returns the Custodian's RSA-OAEP public key hex for emergency key wrapping.
+ */
+custodianRouter.get(
+  "/public-key",
+  (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const publicKeyHex = getCustodianPublicKeyHex();
+      res.json({ publicKeyHex });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 /**
  * GET /api/custodian/providers

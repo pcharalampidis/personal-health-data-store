@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
 import { useDoctorAccess, type SharedRecord } from "../hooks/useDoctorAccess.js";
 import { RECORD_TYPES } from "../services/contracts.js";
+import { fromHex, decryptFile, unpackageEncrypted } from "../utils/encryption.js";
+import { importPrivateKeyJWK, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
 
 interface Props {
   account: string;
@@ -20,10 +22,50 @@ export function SharedRecords({ account, provider, signer }: Props) {
 
   const [viewingRecord, setViewingRecord] = useState<SharedRecord | null>(null);
   const [loggingAccess, setLoggingAccess] = useState(false);
+  const [decrypting, setDecrypting] = useState<string | null>(null);
+  const [decryptError, setDecryptError] = useState("");
 
   useEffect(() => {
     loadSharedRecords();
   }, [loadSharedRecords]);
+
+  const handleDecryptDownload = async (record: SharedRecord) => {
+    setDecrypting(String(record.recordId));
+    setDecryptError("");
+
+    try {
+      const privJwk = getStoredPrivateKeyJWK(account);
+      if (!privJwk) throw new Error("Private key not found. Re-register to generate keys.");
+
+      const rsaPrivKey = await importPrivateKeyJWK(privJwk);
+      const aesKey = await unwrapAESKey(fromHex(record.encryptedKey), rsaPrivKey);
+
+      const res = await fetch(`/api/records/fetch/${record.ipfsCID}`);
+      if (!res.ok) throw new Error("Failed to fetch from IPFS");
+      const { encryptedContent } = await res.json();
+
+      const raw = atob(encryptedContent);
+      const encryptedBytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) encryptedBytes[i] = raw.charCodeAt(i);
+
+      const { iv, encrypted } = unpackageEncrypted(encryptedBytes);
+      const decrypted = await decryptFile(encrypted, iv, aesKey);
+
+      const blob = new Blob([decrypted]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `record-${record.recordId}`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      await logRecordAccess(record.recordId);
+    } catch (err) {
+      setDecryptError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDecrypting(null);
+    }
+  };
 
   const handleViewRecord = async (record: SharedRecord) => {
     setLoggingAccess(true);
@@ -55,6 +97,8 @@ export function SharedRecords({ account, provider, signer }: Props) {
           No records have been shared with you yet. Request access from patients to view their health records.
         </p>
       )}
+
+      {decryptError && <p style={styles.error}>{decryptError}</p>}
 
       <div style={styles.recordGrid}>
         {sharedRecords.map((record) => (
@@ -90,10 +134,17 @@ export function SharedRecords({ account, provider, signer }: Props) {
             <div style={styles.recordActions}>
               <button
                 style={styles.viewBtn}
+                onClick={() => handleDecryptDownload(record)}
+                disabled={decrypting === String(record.recordId)}
+              >
+                {decrypting === String(record.recordId) ? "Decrypting..." : "Decrypt & Download"}
+              </button>
+              <button
+                style={{ ...styles.viewBtn, background: "var(--color-bg)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
                 onClick={() => handleViewRecord(record)}
                 disabled={loggingAccess}
               >
-                {loggingAccess ? "Loading..." : "View Details"}
+                Details
               </button>
             </div>
           </div>

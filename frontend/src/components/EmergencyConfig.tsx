@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
 import { isAddress } from "ethers";
 import { useEmergencyAccess } from "../hooks/useEmergencyAccess.js";
-import { RECORD_TYPES } from "../services/contracts.js";
+import { RECORD_TYPES, getRecordManagerContract, getUserRegistryContract, getEmergencyAccessContract } from "../services/contracts.js";
+import { fromHex, toHex } from "../utils/encryption.js";
+import { importPublicKeyJWK, importPrivateKeyJWK, wrapAESKey, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
 
 interface Props {
   account: string;
@@ -21,6 +23,7 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
     configureEmergencyAccess,
     updateEmergencyContacts,
     setRecordEmergencyFlag,
+    storeEmergencyKeys,
     isUserRegistered,
   } = useEmergencyAccess(account, provider, signer);
 
@@ -30,6 +33,7 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
   const [localError, setLocalError] = useState("");
   const [success, setSuccess] = useState("");
   const [togglingRecord, setTogglingRecord] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -135,6 +139,89 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
       setLocalError(err instanceof Error ? err.message : String(err));
     } finally {
       setTogglingRecord(null);
+    }
+  };
+
+  const handleSyncEmergencyKeys = async () => {
+    if (!config?.isConfigured) {
+      setLocalError("Configure emergency access first");
+      return;
+    }
+
+    const flaggedRecords = emergencyRecords.filter((r) => r.isEmergency);
+    if (flaggedRecords.length === 0) {
+      setLocalError("No emergency-flagged records to sync");
+      return;
+    }
+
+    setSyncing(true);
+    setLocalError("");
+    setSuccess("");
+
+    try {
+      const privJwk = getStoredPrivateKeyJWK(account);
+      if (!privJwk) throw new Error("Private key not found. Re-register to generate keys.");
+      const rsaPrivKey = await importPrivateKeyJWK(privJwk);
+
+      const recordManager = getRecordManagerContract(signer);
+      const userRegistry = getUserRegistryContract(signer);
+      const trustedContacts = config.trustedContacts;
+
+      // Pre-fetch contact public keys
+      const contactPubKeys: CryptoKey[] = [];
+      for (const contact of trustedContacts) {
+        const pubHex: string = await userRegistry.getPublicKey(contact);
+        const pubJson = new TextDecoder().decode(fromHex(pubHex));
+        contactPubKeys.push(await importPublicKeyJWK(pubJson));
+      }
+
+      // Fetch Custodian public key
+      let custodianPubKey: CryptoKey | null = null;
+      try {
+        const res = await fetch("/api/custodian/public-key");
+        if (res.ok) {
+          const { publicKeyHex } = await res.json();
+          const custodianPubJson = new TextDecoder().decode(fromHex(publicKeyHex));
+          custodianPubKey = await importPublicKeyJWK(custodianPubJson);
+        }
+      } catch { /* Custodian endpoint may not be available */ }
+
+      const recordIds = flaggedRecords.map((r) => r.recordId);
+      // Keys order for trusted contacts: [rec0-contact0, rec0-contact1, ..., rec1-contact0, ...]
+      const wrappedKeys: string[] = [];
+      const custodianWrappedKeys: string[] = [];
+
+      for (const record of flaggedRecords) {
+        const patientWrappedHex: string = await recordManager.getEncryptedKey(record.recordId, account);
+        const aesKey = await unwrapAESKey(fromHex(patientWrappedHex), rsaPrivKey);
+
+        for (const contactPub of contactPubKeys) {
+          const wrapped = await wrapAESKey(aesKey, contactPub);
+          wrappedKeys.push(toHex(wrapped));
+        }
+
+        // Wrap for Custodian
+        if (custodianPubKey) {
+          const custWrapped = await wrapAESKey(aesKey, custodianPubKey);
+          custodianWrappedKeys.push(toHex(custWrapped));
+        }
+      }
+
+      // Store trusted-contact wrapped keys
+      const ok = await storeEmergencyKeys(recordIds, trustedContacts, wrappedKeys);
+
+      // Store custodian-wrapped keys
+      if (custodianPubKey && custodianWrappedKeys.length > 0) {
+        const emergencyContract = getEmergencyAccessContract(signer);
+        const tx = await emergencyContract.storeCustodianEmergencyKeys(recordIds, custodianWrappedKeys);
+        await tx.wait();
+      }
+
+      if (ok) setSuccess("Emergency keys synced for trusted contacts and Custodian");
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -266,6 +353,16 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
                 </button>
               </div>
             ))}
+
+            {config?.isConfigured && emergencyCount > 0 && (
+              <button
+                style={{ ...styles.saveBtn, marginTop: "var(--space-sm)" }}
+                onClick={handleSyncEmergencyKeys}
+                disabled={syncing}
+              >
+                {syncing ? "Syncing Keys..." : "Sync Emergency Keys for Trusted Contacts"}
+              </button>
+            )}
           </div>
         )}
       </div>

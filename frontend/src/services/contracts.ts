@@ -63,9 +63,12 @@ const EMERGENCY_ACCESS_ABI = [
   "function hasPendingSession(address _patient, address _doctor) external view returns (bool)",
   "function MIN_SESSION_DURATION() external view returns (uint256)",
   "function MAX_SESSION_DURATION() external view returns (uint256)",
+  "function storeCustodianEmergencyKeys(uint256[] calldata recordIds, bytes[] calldata wrappedKeys) external",
+  "function getCustodianEmergencyKey(address patient, uint256 recordId) external view returns (bytes)",
   "event EmergencyAccessTriggered(uint256 indexed sessionId, address indexed patient, address indexed doctor, uint8 triggerType, uint256 timestamp)",
   "event EmergencyOTPIssued(uint256 indexed sessionId, address indexed patient, address indexed doctor, uint256 expiresAt, uint256 timestamp)",
   "event EmergencySessionRevoked(uint256 indexed sessionId, address indexed patient, uint256 timestamp)",
+  "event CustodianEmergencyKeysStored(address indexed patient, uint256 recordCount, uint256 timestamp)",
 ];
 
 const RECORD_TYPES = [

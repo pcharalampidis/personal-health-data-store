@@ -278,4 +278,33 @@ interface IEmergencyAccess {
     function hasActiveSession(address _patient, address _doctor) external view returns (bool);
     function hasPendingSession(address _patient, address _doctor) external view returns (bool);
     function getSessionCount() external view returns (uint256);
+
+    // ── Custodian Emergency Key Storage ─────────────
+
+    event CustodianEmergencyKeysStored(
+        address indexed patient,
+        uint256 recordCount,
+        uint256 timestamp
+    );
+
+    /**
+     * @notice Patient stores AES keys wrapped for Custodian (emergency path)
+     * @param recordIds Array of emergency record IDs
+     * @param wrappedKeys Array of AES keys wrapped with Custodian RSA public key
+     */
+    function storeCustodianEmergencyKeys(
+        uint256[] calldata recordIds,
+        bytes[] calldata wrappedKeys
+    ) external;
+
+    /**
+     * @notice Custodian reads wrapped emergency key for re-wrapping
+     * @param patient The patient address
+     * @param recordId The record ID
+     * @return The AES key wrapped for Custodian
+     */
+    function getCustodianEmergencyKey(
+        address patient,
+        uint256 recordId
+    ) external view returns (bytes memory);
 }
