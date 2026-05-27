@@ -68,6 +68,9 @@ export async function retrieveAndDecryptRecord(
   if (contentHash && contentHash !== "0x" + "0".repeat(64)) {
     const computed = await hashContent(encryptedBytes);
     hashVerified = computed.toLowerCase() === contentHash.toLowerCase();
+    if (!hashVerified) {
+      throw new RetrievalError("verifying", "File integrity could not be verified. The stored content does not match the expected hash. For safety, this record will not be opened.");
+    }
   }
 
   // 4. Decrypt

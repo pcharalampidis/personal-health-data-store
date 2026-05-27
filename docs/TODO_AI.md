@@ -696,7 +696,7 @@ Result summary:
 Follow-up tasks:
 - M4.2
 
-### [ ] M4.2 - Record packaging and retrieval utilities
+### [x] M4.2 - Record packaging and retrieval utilities
 
 Requirement IDs:
 - FR-006, FR-007, FR-008, FR-017, FR-014c, NFR-001, NFR-002
@@ -720,7 +720,7 @@ Verification scripts:
 - npx tsc --noEmit
 - npx vite build
 
-### [ ] M4.3 - Reusable RecordViewer component
+### [x] M4.3 - Reusable RecordViewer component
 
 Requirement IDs:
 - FR-008, FR-017, FR-014c, FR-016, NFR-013, NFR-014
@@ -738,7 +738,7 @@ Verification scripts:
 - npx tsc --noEmit
 - npx vite build
 
-### [ ] M4.4 - Patient self-view and download
+### [x] M4.4 - Patient self-view and download
 
 Requirement IDs:
 - FR-008, NFR-001, NFR-013
@@ -757,7 +757,7 @@ Verification scripts:
 - npx tsc --noEmit
 - npx vite build
 
-### [ ] M4.5 - Refactor doctor shared records to RecordViewer
+### [x] M4.5 - Refactor doctor shared records to RecordViewer
 
 Requirement IDs:
 - FR-017, FR-016, NFR-008
@@ -775,7 +775,7 @@ Verification scripts:
 - npx tsc --noEmit
 - npx vite build
 
-### [ ] M4.6 - Emergency retrieval viewer integration
+### [x] M4.6 - Emergency retrieval viewer integration
 
 Requirement IDs:
 - FR-014c, FR-014d, FR-016
@@ -794,7 +794,7 @@ Verification scripts:
 - npx tsc --noEmit
 - npx vite build
 
-### [ ] M4.7 - Upload UX hardening
+### [x] M4.7 - Upload UX hardening
 
 Requirement IDs:
 - FR-006, FR-007, NFR-013, NFR-014
@@ -812,7 +812,7 @@ Verification scripts:
 - npx tsc --noEmit
 - npx vite build
 
-### [ ] M4.8 - Record actions and lifecycle polish
+### [x] M4.8 - Record actions and lifecycle polish
 
 Requirement IDs:
 - FR-008, FR-009, FR-014a, FR-015
@@ -831,7 +831,7 @@ Verification scripts:
 - npx tsc --noEmit
 - npx vite build
 
-### [ ] M4.9 - Workflow catalogue and demo script
+### [x] M4.9 - Workflow catalogue and demo script
 
 Requirement IDs:
 - All core MVP FRs

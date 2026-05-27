@@ -273,36 +273,23 @@ export function useEmergencyAccess(
 
   const consumeEmergencyAccess = useCallback(
     async (sessionId: bigint): Promise<{ encryptedData: string; recordIds: bigint[] } | null> => {
-      if (!signer) return null;
+      if (!signer || !provider) return null;
       setError("");
 
       try {
         const contract = getEmergencyAccessContract(signer);
         const tx = await contract.consumeEmergencyAccess(sessionId);
-        const receipt = await tx.wait();
+        await tx.wait();
 
-        const iface = contract.interface;
-        for (const log of receipt.logs) {
-          try {
-            const parsed = iface.parseLog(log);
-            if (parsed?.name === "EmergencyOTPConsumed") {
-              const session = await contract.getSession(sessionId);
-              const recordContract = getRecordManagerContract(provider!);
-              const recordIds = await recordContract.getRecordsByOwner(session.patient);
-              return {
-                encryptedData: session.encryptedOTP,
-                recordIds: recordIds.filter(async (id: bigint) => {
-                  const rec = await recordContract.getRecord(id);
-                  return rec.isEmergency;
-                }),
-              };
-            }
-          } catch {
-            // Not the right log
-          }
-        }
+        // After successful tx, read state directly (don't rely on event parsing)
+        const session = await contract.getSession(sessionId);
+        const recordContract = getRecordManagerContract(provider);
+        const recordIds: bigint[] = await recordContract.getEmergencyRecords(session.patient);
 
-        return null;
+        return {
+          encryptedData: session.encryptedOTP,
+          recordIds,
+        };
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
         return null;

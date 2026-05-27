@@ -303,7 +303,7 @@ export function RecordList({ account, provider, signer }: Props) {
             )}
           </div>
           <div style={styles.recordMeta}>
-            <span>CID: {r.ipfsCID.slice(0, 20)}...</span>
+            <span>Stored securely</span>
             <span>Created: {formatDate(r.createdAt)}</span>
           </div>
           {r.status === 0 && (

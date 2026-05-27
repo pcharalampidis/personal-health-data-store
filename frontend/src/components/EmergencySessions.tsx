@@ -359,7 +359,7 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
                     onClick={() => handleConsume(session.sessionId)}
                     disabled={consuming === String(session.sessionId)}
                   >
-                    {consuming === String(session.sessionId) ? "Consuming..." : "Consume Access"}
+                    {consuming === String(session.sessionId) ? "Opening..." : "Open emergency session"}
                   </button>
                 )}
                 {session.status === 0 && role === "doctor" && (

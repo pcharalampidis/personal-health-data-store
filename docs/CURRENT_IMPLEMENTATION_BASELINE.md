@@ -1,7 +1,7 @@
 # Current Implementation Baseline
 
 Baseline date: 2026-05-27  
-Last validated commit: `bbce73c95b587d08071800395492ea84933de198`
+Last validated commit: `1c97970`
 
 ## Purpose
 
@@ -55,19 +55,31 @@ All contracts: 151 tests passing.
 
 ---
 
-## Known UX/Retrieval Gaps (Milestone 4 Targets)
+## Resolved in Milestone 4 (commit `1c97970`)
 
-| Gap | Description |
+| Gap | Resolution |
 |---|---|
-| Patient self-view | RecordList shows metadata only; no decrypt/view/download for patient's own records |
-| Duplicated decrypt logic | SharedRecords.tsx and EmergencySessions.tsx each implement their own decrypt/download |
-| No unified viewer | No reusable RecordViewer component across owner/doctor/emergency contexts |
-| Upload UX | Debug panel, raw CIDs, console-oriented messages still visible |
-| File metadata | No preserved filename/MIME type after decryption (raw bytes only) |
-| Hash verification | Not surfaced in UI during retrieval |
-| Trusted-contact retrieval | Incomplete — getEmergencyKey path not fully wired in frontend |
-| Frontend ABI gaps | Missing: restoreRecord, getEmergencyRecords, getContentHash |
-| Access logging timing | Currently logs on metadata view, should log after successful decrypt only |
+| Patient self-view | RecordViewer integrated into RecordList (owner mode) |
+| Duplicated decrypt logic | SharedRecords + EmergencySessions now use RecordViewer |
+| No unified viewer | RecordViewer.tsx with PDF/image/JSON preview |
+| Upload UX | PHDS2 packaging, file validation, stepper, no debug wording |
+| File metadata | PHDS2 format preserves filename/MIME inside encrypted payload |
+| Hash verification | Surfaced as integrity badge in RecordViewer; mismatch blocks retrieval |
+| Trusted-contact retrieval | Uses getEmergencyRecords + getEmergencyKey after consume |
+| Frontend ABI gaps | Added restoreRecord, getEmergencyRecords |
+| Access logging timing | Fires only after successful decrypt via onAccessLogged |
+
+---
+
+## Remaining Gaps (Post-M4)
+
+| Gap | Target |
+|---|---|
+| Visual app shell / navigation | M5 (sidebar desktop, bottom nav mobile) |
+| Action semantics / disclosure wording | Track B (AS-1 to AS-8) |
+| Privacy/Security info page | AS-8 |
+| Activity/audit timeline page | M5 or stretch |
+| Paused contract UX | Not yet surfaced to user |
 
 ---
 
