@@ -16,20 +16,23 @@ import { EmergencyTrigger } from "./components/EmergencyTrigger.js";
 import { EmergencySessions } from "./components/EmergencySessions.js";
 import { PrivacySecurityInfo } from "./components/PrivacySecurityInfo.js";
 import { ToastContainer } from "./components/Toast.js";
+import { AppShell } from "./components/layout/AppShell.js";
+import type { NavItem } from "./components/layout/Sidebar.js";
+import { getStoredPrivateKeyJWK } from "./utils/rsaKeys.js";
 
 type PatientPage = "records" | "access" | "emergency" | "settings";
 type DoctorPage = "shared" | "request" | "emergency" | "settings";
 
-const PATIENT_NAV: { id: PatientPage; label: string; icon: string }[] = [
-  { id: "records", label: "Records", icon: "📋" },
-  { id: "access", label: "Access", icon: "🔑" },
+const PATIENT_NAV: NavItem[] = [
+  { id: "records", label: "Records", icon: "📄" },
+  { id: "access", label: "Access", icon: "🔐" },
   { id: "emergency", label: "Emergency", icon: "🚨" },
   { id: "settings", label: "Settings", icon: "⚙️" },
 ];
 
-const DOCTOR_NAV: { id: DoctorPage; label: string; icon: string }[] = [
-  { id: "shared", label: "Shared", icon: "📋" },
-  { id: "request", label: "Request", icon: "🔑" },
+const DOCTOR_NAV: NavItem[] = [
+  { id: "shared", label: "Shared", icon: "👥" },
+  { id: "request", label: "Request", icon: "✉️" },
   { id: "emergency", label: "Emergency", icon: "🚨" },
   { id: "settings", label: "Settings", icon: "⚙️" },
 ];
@@ -52,6 +55,7 @@ function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [patientPage, setPatientPage] = useState<PatientPage>("records");
   const [doctorPage, setDoctorPage] = useState<DoctorPage>("shared");
+  const [showUpload, setShowUpload] = useState(false);
 
   useEffect(() => {
     if (account && provider) {
@@ -62,6 +66,7 @@ function App() {
 
   const handleUploaded = () => {
     setRefreshKey((k) => k + 1);
+    setShowUpload(false);
     success("Record uploaded securely");
   };
   const handlePermissionChange = () => setRefreshKey((k) => k + 1);
@@ -120,36 +125,24 @@ function App() {
     : (p: string) => setDoctorPage(p as DoctorPage);
 
   return (
-    <div className="app-shell">
-      {/* Sidebar (desktop) */}
-      <aside className="app-sidebar">
-        <div className="app-sidebar__logo">Health Vault</div>
-        <div className="app-sidebar__role">
-          <span className={`role-badge role-badge--${role}`}>
-            {isPatient ? "Patient" : "Doctor"}
-          </span>
-        </div>
-        <ul className="app-sidebar__nav">
-          {navItems.map((item) => (
-            <li key={item.id}>
-              <button data-active={activePage === item.id} onClick={() => setPage(item.id)}>
-                <span>{item.icon}</span> {item.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="app-sidebar__wallet">{formatAddr(account)}</div>
-      </aside>
-
-      {/* Main content */}
-      <main className="app-main">
+    <AppShell role={role as "patient" | "doctor"} account={account} navItems={navItems} activePage={activePage} onNavigate={setPage}>
         {isPatient && patientPage === "records" && (
           <>
             <div className="page-header">
               <h1 className="page-header__title">Records</h1>
               <p className="page-header__description">Upload, view, and manage your encrypted health records.</p>
             </div>
-            <UploadRecord signer={signer} onUploaded={handleUploaded} />
+            {!showUpload && (
+              <button onClick={() => setShowUpload(true)} style={{ padding: "var(--space-sm) var(--space-lg)", border: "none", borderRadius: "var(--radius-md)", background: "var(--color-primary)", color: "#fff", fontWeight: 600, fontSize: "var(--font-base)", cursor: "pointer", minHeight: "var(--touch-target)" }}>
+                Upload record
+              </button>
+            )}
+            {showUpload && (
+              <div style={{ position: "relative" }}>
+                <button onClick={() => setShowUpload(false)} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--color-text-light)", zIndex: 1, minWidth: 44, minHeight: 44 }}>×</button>
+                <UploadRecord signer={signer} onUploaded={handleUploaded} />
+              </div>
+            )}
             <RecordList key={refreshKey} account={account} provider={provider} signer={signer} />
           </>
         )}
@@ -189,12 +182,24 @@ function App() {
               <h1 className="page-header__title">Settings</h1>
               <p className="page-header__description">Privacy, security, and account information.</p>
             </div>
-            <PrivacySecurityInfo />
-            <div style={{ marginTop: "var(--space-md)", padding: "var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", background: "var(--color-bg-secondary)" }}>
-              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)" }}>
-                <strong>Wallet:</strong> {account}
+            <div style={{ padding: "var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", background: "var(--color-bg-secondary)", marginBottom: "var(--space-md)" }}>
+              <h3 style={{ margin: "0 0 var(--space-sm)", fontSize: "var(--font-lg)", fontWeight: 600 }}>Account</h3>
+              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)", wordBreak: "break-all" }}><strong>Wallet:</strong> {account}</p>
+              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)" }}><strong>Role:</strong> Patient</p>
+            </div>
+            <div style={{ padding: "var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", background: getStoredPrivateKeyJWK(account) ? "var(--color-success-bg)" : "var(--color-warning-bg)", marginBottom: "var(--space-md)" }}>
+              <h3 style={{ margin: "0 0 var(--space-xs)", fontSize: "var(--font-base)", fontWeight: 600 }}>
+                {getStoredPrivateKeyJWK(account) ? "✓ Local access key found" : "⚠ Local access key missing"}
+              </h3>
+              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)", margin: 0 }}>
+                {getStoredPrivateKeyJWK(account)
+                  ? "This browser can unlock records associated with this wallet."
+                  : "Some records may not unlock in this browser. Use the browser where you registered."}
               </p>
-              <button onClick={disconnect} style={{ marginTop: "var(--space-sm)", padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-error)", cursor: "pointer" }}>
+            </div>
+            <PrivacySecurityInfo />
+            <div style={{ marginTop: "var(--space-md)" }}>
+              <button onClick={disconnect} style={{ padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-error)", cursor: "pointer", minHeight: "var(--touch-target)" }}>
                 Disconnect wallet
               </button>
             </div>
@@ -238,30 +243,31 @@ function App() {
               <h1 className="page-header__title">Settings</h1>
               <p className="page-header__description">Account information.</p>
             </div>
-            <div style={{ padding: "var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", background: "var(--color-bg-secondary)" }}>
-              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)" }}>
-                <strong>Wallet:</strong> {account}
+            <div style={{ padding: "var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", background: "var(--color-bg-secondary)", marginBottom: "var(--space-md)" }}>
+              <h3 style={{ margin: "0 0 var(--space-sm)", fontSize: "var(--font-lg)", fontWeight: 600 }}>Account</h3>
+              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)", wordBreak: "break-all" }}><strong>Wallet:</strong> {account}</p>
+              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)" }}><strong>Role:</strong> Doctor</p>
+            </div>
+            <div style={{ padding: "var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-lg)", background: getStoredPrivateKeyJWK(account) ? "var(--color-success-bg)" : "var(--color-warning-bg)", marginBottom: "var(--space-md)" }}>
+              <h3 style={{ margin: "0 0 var(--space-xs)", fontSize: "var(--font-base)", fontWeight: 600 }}>
+                {getStoredPrivateKeyJWK(account) ? "✓ Local access key found" : "⚠ Local access key missing"}
+              </h3>
+              <p style={{ fontSize: "var(--font-sm)", color: "var(--color-text-muted)", margin: 0 }}>
+                {getStoredPrivateKeyJWK(account)
+                  ? "This browser can unlock shared and emergency records."
+                  : "Some records may not unlock in this browser. Use the browser where you registered."}
               </p>
-              <button onClick={disconnect} style={{ marginTop: "var(--space-sm)", padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-error)", cursor: "pointer" }}>
+            </div>
+            <div>
+              <button onClick={disconnect} style={{ padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-error)", cursor: "pointer", minHeight: "var(--touch-target)" }}>
                 Disconnect wallet
               </button>
             </div>
           </>
         )}
-      </main>
-
-      {/* Bottom nav (mobile) */}
-      <nav className="app-bottom-nav">
-        {navItems.map((item) => (
-          <button key={item.id} data-active={activePage === item.id} onClick={() => setPage(item.id)}>
-            <span className="app-bottom-nav__icon">{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </nav>
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-    </div>
+    </AppShell>
   );
 }
 
