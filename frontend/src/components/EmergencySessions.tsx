@@ -9,6 +9,7 @@ import {
 import { fromHex } from "../utils/encryption.js";
 import { getRecordManagerContract, getEmergencyAccessContract } from "../services/contracts.js";
 import { RecordViewer, type RecordViewerRecord } from "./RecordViewer.js";
+import { ConfirmModal } from "./ConfirmModal.js";
 
 interface Props {
   account: string;
@@ -39,6 +40,7 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
   const [triggerFilter, setTriggerFilter] = useState<TriggerFilter>("all");
   const [consumedRecords, setConsumedRecords] = useState<(RecordViewerRecord & { sessionId: bigint })[]>([]);
   const [viewerRecord, setViewerRecord] = useState<(RecordViewerRecord & { sessionId: bigint }) | null>(null);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<bigint | null>(null);
 
   useEffect(() => {
     loadSessions(role);
@@ -129,7 +131,7 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
         }
 
         setConsumedRecords(records);
-        setSuccess(`Session #${sessionId} consumed. ${records.length} emergency record(s) available.`);
+        setSuccess(`Session #${sessionId} opened. ${records.length} emergency record(s) available.`);
         await loadSessions(role);
       }
     } catch (err) {
@@ -233,7 +235,7 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
             <option value="active">Active</option>
-            <option value="consumed">Consumed</option>
+            <option value="consumed">Opened</option>
             <option value="ended">Expired/Revoked</option>
           </select>
           <select
@@ -347,10 +349,10 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
                 {canRevoke(session) && (
                   <button
                     style={styles.revokeBtn}
-                    onClick={() => handleRevoke(session.sessionId)}
+                    onClick={() => setConfirmRevokeId(session.sessionId)}
                     disabled={revoking === String(session.sessionId)}
                   >
-                    {revoking === String(session.sessionId) ? "Revoking..." : "Revoke"}
+                    {revoking === String(session.sessionId) ? "Revoking..." : "End Session"}
                   </button>
                 )}
                 {canConsume(session) && (
@@ -396,6 +398,19 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
             </div>
           ))}
         </div>
+      )}
+
+      {confirmRevokeId && (
+        <ConfirmModal
+          title="End emergency session?"
+          message="This stops future access through this emergency session. It cannot remove files already downloaded."
+          confirmLabel="End session"
+          onConfirm={async () => {
+            await handleRevoke(confirmRevokeId);
+            setConfirmRevokeId(null);
+          }}
+          onCancel={() => setConfirmRevokeId(null)}
+        />
       )}
 
       <div style={styles.refreshRow}>

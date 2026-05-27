@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
+import { ConfirmModal } from "./ConfirmModal.js";
 import {
   usePermissions,
   type AccessRequest,
@@ -115,10 +116,18 @@ export function PermissionManager({ account, provider, signer, records }: Props)
   };
 
   const handleRevoke = async (permission: Permission) => {
-    const id = `${permission.recordId}-${permission.grantedTo}`;
+    setConfirmRevoke(permission);
+  };
+
+  const [confirmRevoke, setConfirmRevoke] = useState<Permission | null>(null);
+
+  const executeRevoke = async () => {
+    if (!confirmRevoke) return;
+    const id = `${confirmRevoke.recordId}-${confirmRevoke.grantedTo}`;
     setProcessingId(id);
-    await revokeAccess(permission.recordId, permission.grantedTo);
+    await revokeAccess(confirmRevoke.recordId, confirmRevoke.grantedTo);
     setProcessingId(null);
+    setConfirmRevoke(null);
   };
 
   const toggleSelectRequest = (id: string) => {
@@ -420,6 +429,16 @@ export function PermissionManager({ account, provider, signer, records }: Props)
           Refresh
         </button>
       </div>
+
+      {confirmRevoke && (
+        <ConfirmModal
+          title="Stop future access?"
+          message="This doctor will no longer be able to open this record through the app. This cannot delete copies they may have already downloaded."
+          confirmLabel="Revoke access"
+          onConfirm={executeRevoke}
+          onCancel={() => setConfirmRevoke(null)}
+        />
+      )}
     </div>
   );
 }

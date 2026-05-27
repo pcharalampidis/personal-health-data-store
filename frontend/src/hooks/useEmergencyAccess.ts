@@ -33,7 +33,7 @@ export interface EmergencyRecord {
   recordType: number;
 }
 
-export const SESSION_STATUS_LABELS = ["Pending", "Active", "Consumed", "Expired", "Revoked"] as const;
+export const SESSION_STATUS_LABELS = ["Pending", "Active", "Opened", "Expired", "Revoked"] as const;
 export const TRIGGER_TYPE_LABELS = ["Trusted Contact", "Custodian Registry"] as const;
 
 export function useEmergencyAccess(

@@ -14,6 +14,7 @@ import { SharedRecords } from "./components/SharedRecords.js";
 import { EmergencyConfig } from "./components/EmergencyConfig.js";
 import { EmergencyTrigger } from "./components/EmergencyTrigger.js";
 import { EmergencySessions } from "./components/EmergencySessions.js";
+import { PrivacySecurityInfo } from "./components/PrivacySecurityInfo.js";
 import { ToastContainer } from "./components/Toast.js";
 
 function App() {
@@ -120,6 +121,7 @@ function App() {
                   role="patient"
                   refreshKey={refreshKey}
                 />
+                <PrivacySecurityInfo />
               </>
             )}
 

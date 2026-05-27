@@ -3,6 +3,7 @@ import type { JsonRpcSigner, BrowserProvider } from "ethers";
 import { isAddress } from "ethers";
 import { useEmergencyAccess, TRIGGER_TYPE_LABELS } from "../hooks/useEmergencyAccess.js";
 import { getUserRegistryContract } from "../services/contracts.js";
+import { ConfirmModal } from "./ConfirmModal.js";
 
 interface Props {
   account: string;
@@ -23,6 +24,7 @@ export function EmergencyTrigger({ account, provider, signer, onTriggered }: Pro
   const [checking, setChecking] = useState(false);
   const [localError, setLocalError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
   const [patientInfo, setPatientInfo] = useState<{
     isValid: boolean;
     hasEmergencyRecords: boolean;
@@ -87,7 +89,7 @@ export function EmergencyTrigger({ account, provider, signer, onTriggered }: Pro
       if (sessionId !== null) {
         const triggerType = patientInfo?.isTrustedContact ? 0 : 1;
         setSuccess(
-          `Emergency access triggered! Session #${sessionId} created (${TRIGGER_TYPE_LABELS[triggerType]}). ` +
+          `Emergency access requested. Session #${sessionId} created (${TRIGGER_TYPE_LABELS[triggerType]}). ` +
             (triggerType === 0
               ? "You have immediate access."
               : "Awaiting Custodian validation...")
@@ -108,9 +110,9 @@ export function EmergencyTrigger({ account, provider, signer, onTriggered }: Pro
 
   return (
     <div style={styles.card}>
-      <h2 style={styles.heading}>Trigger Emergency Access</h2>
+      <h2 style={styles.heading}>Request Emergency Access</h2>
       <p style={styles.description}>
-        Request emergency access to an incapacitated patient's health records.
+        Use this only when the patient cannot provide consent. Emergency access is temporary and permanently logged.
       </p>
 
       <div style={styles.warningBox}>
@@ -193,16 +195,26 @@ export function EmergencyTrigger({ account, provider, signer, onTriggered }: Pro
         {patientInfo?.hasEmergencyRecords && (
           <button
             style={styles.triggerBtn}
-            onClick={handleTrigger}
+            onClick={() => setShowConfirm(true)}
             disabled={processing}
           >
-            {processing ? "Triggering..." : "Trigger Emergency Access"}
+            {processing ? "Requesting..." : "Request Emergency Access"}
           </button>
         )}
 
         {(localError || error) && <p style={styles.error}>{localError || error}</p>}
         {success && <p style={styles.success}>{success}</p>}
       </div>
+      {showConfirm && (
+        <ConfirmModal
+          title="Request emergency access?"
+          message="Use this only when the patient cannot provide consent. Emergency access is temporary and permanently logged."
+          confirmLabel="Request access"
+          confirmStyle="danger"
+          onConfirm={() => { setShowConfirm(false); handleTrigger(); }}
+          onCancel={() => setShowConfirm(false)}
+        />
+      )}
     </div>
   );
 }

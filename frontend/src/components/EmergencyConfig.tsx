@@ -360,7 +360,7 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
                 onClick={handleSyncEmergencyKeys}
                 disabled={syncing}
               >
-                {syncing ? "Syncing Keys..." : "Sync Emergency Keys for Trusted Contacts"}
+                {syncing ? "Preparing Keys..." : "Prepare Emergency Access Keys"}
               </button>
             )}
           </div>
