@@ -183,14 +183,28 @@ export function RecordList({ account, provider, signer }: Props) {
         case "delete": {
           const cid = confirmAction.record.ipfsCID;
           // 1. Revoke all doctor access (best-effort)
+          let revoked = false;
           try {
             const ac = getAccessControlContract(signer);
             const revokeTx = await ac.revokeAllAccess(confirmAction.record.recordId);
             await revokeTx.wait();
+            revoked = true;
           } catch { /* may fail if no permissions exist */ }
           // 2. Delete on-chain (clears CID + owner key)
-          tx = await contract.deleteRecord(confirmAction.record.recordId);
-          await tx.wait();
+          try {
+            tx = await contract.deleteRecord(confirmAction.record.recordId);
+            await tx.wait();
+          } catch (deleteErr) {
+            // If revoke succeeded but delete was cancelled/failed
+            if (revoked) {
+              setError("Doctor access was revoked, but the record was not removed. You can try removing it again.");
+            } else {
+              setError(friendlyErrorMessage(deleteErr));
+            }
+            setConfirmAction(null);
+            setActionPending(false);
+            return;
+          }
           // 3. Unpin from IPFS (best-effort, after blockchain confirmation)
           try {
             await fetch(`/api/records/unpin/${cid}`, { method: "DELETE" });
@@ -224,7 +238,7 @@ export function RecordList({ account, provider, signer }: Props) {
       case "emergency-off":
         return { title: "Remove emergency flag?", message: "This record will no longer be available during emergency sessions.", confirmLabel: "Remove flag" };
       case "delete":
-        return { title: "Remove this record from your vault?", message: "This will revoke all active doctor access, remove the app reference, and unpin the encrypted file. Blockchain history cannot be erased, and encrypted copies may still exist if pinned elsewhere.", confirmLabel: "Remove from vault" };
+        return { title: "Remove this record from your vault?", message: "This will attempt to revoke active doctor access, remove the app reference, and unpin the encrypted file. Blockchain history cannot be erased, and encrypted copies may still exist if pinned elsewhere.", confirmLabel: "Remove from vault" };
       default:
         return null;
     }
