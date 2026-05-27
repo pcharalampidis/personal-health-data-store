@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { JsonRpcSigner } from "ethers";
 import { getUserRegistryContract } from "../services/contracts.js";
 import { ensureRSAKeyPair } from "../utils/rsaKeys.js";
+import { friendlyErrorMessage } from "../utils/errorMessages.js";
 
 interface Props {
   signer: JsonRpcSigner;
@@ -49,7 +50,7 @@ export function Register({ signer, account, onRegistered }: Props) {
         onRegistered?.();
       }
     } catch (err: any) {
-      setStatus(`❌ Error: ${err.message || err.reason || "Unknown error"}`);
+      setStatus(`❌ ${friendlyErrorMessage(err)}`);
     } finally {
       setRegistering(false);
     }

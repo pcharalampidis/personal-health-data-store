@@ -108,8 +108,13 @@ function App() {
     return (
       <div className="container" style={{ maxWidth: 480, margin: "0 auto", padding: "var(--space-xl)" }}>
         <h1 style={{ fontSize: "var(--font-xl)", fontWeight: 700, marginBottom: "var(--space-md)" }}>Welcome</h1>
-        <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-md)" }}>
+        <p style={{ color: "var(--color-text-muted)", marginBottom: "var(--space-sm)" }}>
           Connected as {formatAddr(account)}. Register to get started.
+        </p>
+        <p style={{ marginBottom: "var(--space-md)" }}>
+          <button onClick={changeWallet} style={{ background: "none", border: "none", color: "var(--color-primary)", cursor: "pointer", fontSize: "var(--font-sm)", textDecoration: "underline", padding: 0 }}>
+            Change wallet
+          </button>
         </p>
         <Register signer={signer} account={account} onRegistered={handleRegistered} />
         <ToastContainer toasts={toasts} onRemove={removeToast} />

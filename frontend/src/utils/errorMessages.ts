@@ -14,7 +14,8 @@ export function getFriendlyError(error: unknown): FriendlyError {
   const text = String(
     raw?.shortMessage || raw?.reason || raw?.message || error
   );
-  const code = raw?.code ?? (raw?.info as Record<string, unknown>)?.error;
+  const info = raw?.info as Record<string, unknown> | undefined;
+  const code = raw?.code ?? (info?.error as Record<string, unknown>)?.code ?? (raw?.error as Record<string, unknown>)?.code;
 
   // User rejected in wallet
   if (

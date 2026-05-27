@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import type { BrowserProvider, JsonRpcSigner } from "ethers";
-import { getRecordManagerContract, RECORD_TYPES, RECORD_MANAGER_ADDRESS } from "../services/contracts.js";
+import { getRecordManagerContract, getAccessControlContract, RECORD_TYPES, RECORD_MANAGER_ADDRESS } from "../services/contracts.js";
 import { RecordViewer, type RecordViewerRecord } from "./RecordViewer.js";
 import { ConfirmModal } from "./ConfirmModal.js";
 import { friendlyErrorMessage } from "../utils/errorMessages.js";
@@ -100,6 +100,7 @@ export function RecordList({ account, provider, signer }: Props) {
     return records.filter((r) => {
       if (typeFilter !== "all" && r.recordType !== typeFilter) return false;
 
+      if (statusFilter === "all" && r.status === 2) return false;
       if (statusFilter === "active" && r.status !== 0) return false;
       if (statusFilter === "archived" && r.status !== 1) return false;
       if (statusFilter === "deleted" && r.status !== 2) return false;
@@ -180,12 +181,21 @@ export function RecordList({ account, provider, signer }: Props) {
           tx = await contract.setEmergencyFlag(confirmAction.record.recordId, false);
           break;
         case "delete": {
-          // 1. Unpin from IPFS (best-effort)
+          const cid = confirmAction.record.ipfsCID;
+          // 1. Revoke all doctor access (best-effort)
           try {
-            await fetch(`/api/records/unpin/${confirmAction.record.ipfsCID}`, { method: "DELETE" });
-          } catch { /* unpin failure is non-blocking */ }
+            const ac = getAccessControlContract(signer);
+            const revokeTx = await ac.revokeAllAccess(confirmAction.record.recordId);
+            await revokeTx.wait();
+          } catch { /* may fail if no permissions exist */ }
           // 2. Delete on-chain (clears CID + owner key)
           tx = await contract.deleteRecord(confirmAction.record.recordId);
+          await tx.wait();
+          // 3. Unpin from IPFS (best-effort, after blockchain confirmation)
+          try {
+            await fetch(`/api/records/unpin/${cid}`, { method: "DELETE" });
+          } catch { /* unpin failure is non-blocking */ }
+          tx = null; // already waited
           break;
         }
         default:
@@ -214,7 +224,7 @@ export function RecordList({ account, provider, signer }: Props) {
       case "emergency-off":
         return { title: "Remove emergency flag?", message: "This record will no longer be available during emergency sessions.", confirmLabel: "Remove flag" };
       case "delete":
-        return { title: "Remove this record from your vault?", message: "This removes the active app reference and unpins the encrypted file. Blockchain history cannot be erased, and encrypted copies may still exist if pinned elsewhere. For stronger privacy, revoke all doctor access first.", confirmLabel: "Remove from vault" };
+        return { title: "Remove this record from your vault?", message: "This will revoke all active doctor access, remove the app reference, and unpin the encrypted file. Blockchain history cannot be erased, and encrypted copies may still exist if pinned elsewhere.", confirmLabel: "Remove from vault" };
       default:
         return null;
     }
