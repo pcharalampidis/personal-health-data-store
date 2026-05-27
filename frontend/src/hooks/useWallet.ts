@@ -90,6 +90,27 @@ export function useWallet() {
     setPendingAccounts(null);
   }, []);
 
+  const changeWallet = useCallback(async () => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+      const accounts = (await window.ethereum.request({ method: "eth_accounts" })) as string[];
+      if (accounts.length === 1) {
+        const { provider: p, signer: s, address } = await connectWithAddress(window.ethereum, accounts[0]);
+        setAccount(address);
+        setProvider(p);
+        setSigner(s);
+      } else if (accounts.length > 1) {
+        setPendingAccounts(accounts);
+      }
+    } catch {
+      // user cancelled account selector
+    }
+  }, []);
+
   useEffect(() => {
     const eth = window.ethereum;
     if (!eth) return;
@@ -130,6 +151,7 @@ export function useWallet() {
     signer,
     connect,
     disconnect,
+    changeWallet,
     pendingAccounts,
     confirmAccount,
     cancelAccountPick,

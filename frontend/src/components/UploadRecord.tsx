@@ -12,6 +12,7 @@ import {
 import { importPublicKeyJWK, wrapAESKey } from "../utils/rsaKeys.js";
 import { createRecordPackage } from "../utils/recordPackage.js";
 import { getRecordManagerContract, getUserRegistryContract, RECORD_TYPES } from "../services/contracts.js";
+import { friendlyErrorMessage } from "../utils/errorMessages.js";
 
 interface Props {
   signer: JsonRpcSigner;
@@ -120,8 +121,7 @@ export function UploadRecord({ signer, onUploaded }: Props) {
       if (fileRef.current) fileRef.current.value = "";
       onUploaded();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
+      setError(friendlyErrorMessage(err));
       setStep("error");
     }
   };

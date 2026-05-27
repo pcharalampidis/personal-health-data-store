@@ -3,6 +3,7 @@ import type { BrowserProvider, JsonRpcSigner } from "ethers";
 import { getRecordManagerContract, RECORD_TYPES, RECORD_MANAGER_ADDRESS } from "../services/contracts.js";
 import { RecordViewer, type RecordViewerRecord } from "./RecordViewer.js";
 import { ConfirmModal } from "./ConfirmModal.js";
+import { friendlyErrorMessage } from "../utils/errorMessages.js";
 
 interface RecordInfo {
   recordId: bigint;
@@ -178,14 +179,23 @@ export function RecordList({ account, provider, signer }: Props) {
         case "emergency-off":
           tx = await contract.setEmergencyFlag(confirmAction.record.recordId, false);
           break;
+        case "delete": {
+          // 1. Unpin from IPFS (best-effort)
+          try {
+            await fetch(`/api/records/unpin/${confirmAction.record.ipfsCID}`, { method: "DELETE" });
+          } catch { /* unpin failure is non-blocking */ }
+          // 2. Delete on-chain (clears CID + owner key)
+          tx = await contract.deleteRecord(confirmAction.record.recordId);
+          break;
+        }
         default:
           return;
       }
-      await tx.wait();
+      if (tx) await tx.wait();
       setConfirmAction(null);
       loadRecords();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(friendlyErrorMessage(err));
       setConfirmAction(null);
     } finally {
       setActionPending(false);
@@ -203,6 +213,8 @@ export function RecordList({ account, provider, signer }: Props) {
         return { title: "Mark as emergency record?", message: "Emergency records can be opened during approved emergency sessions. Only mark records useful in urgent care.", confirmLabel: "Mark emergency", confirmStyle: "primary" as const };
       case "emergency-off":
         return { title: "Remove emergency flag?", message: "This record will no longer be available during emergency sessions.", confirmLabel: "Remove flag" };
+      case "delete":
+        return { title: "Remove this record from your vault?", message: "This removes the active app reference and unpins the encrypted file. Blockchain history cannot be erased, and encrypted copies may still exist if pinned elsewhere. For stronger privacy, revoke all doctor access first.", confirmLabel: "Remove from vault" };
       default:
         return null;
     }
@@ -325,6 +337,9 @@ export function RecordList({ account, provider, signer }: Props) {
                   </button>
                   <button style={styles.archiveBtn} onClick={() => setConfirmAction({ type: "archive", record: r })}>
                     Archive
+                  </button>
+                  <button style={styles.deleteBtn} onClick={() => setConfirmAction({ type: "delete", record: r })}>
+                    Remove from vault
                   </button>
                 </>
               )}
@@ -524,6 +539,16 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "var(--radius-md)",
     background: "var(--color-bg)",
     color: "var(--color-warning, #f59e0b)",
+    cursor: "pointer",
+    fontSize: "var(--font-sm)",
+    minHeight: "var(--touch-target)",
+  },
+  deleteBtn: {
+    padding: "var(--space-sm) var(--space-md)",
+    border: "1px solid var(--color-error)",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-bg)",
+    color: "var(--color-error)",
     cursor: "pointer",
     fontSize: "var(--font-sm)",
     minHeight: "var(--touch-target)",

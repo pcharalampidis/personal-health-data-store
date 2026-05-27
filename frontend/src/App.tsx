@@ -44,6 +44,7 @@ function App() {
     signer,
     connect,
     disconnect,
+    changeWallet,
     pendingAccounts,
     confirmAccount,
     cancelAccountPick,
@@ -198,9 +199,12 @@ function App() {
               </p>
             </div>
             <PrivacySecurityInfo />
-            <div style={{ marginTop: "var(--space-md)" }}>
+            <div style={{ marginTop: "var(--space-md)", display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+              <button onClick={changeWallet} style={{ padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-text)", cursor: "pointer", minHeight: "var(--touch-target)" }}>
+                Change wallet
+              </button>
               <button onClick={disconnect} style={{ padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-error)", cursor: "pointer", minHeight: "var(--touch-target)" }}>
-                Disconnect wallet
+                Disconnect
               </button>
             </div>
           </>
@@ -258,9 +262,12 @@ function App() {
                   : "Some records may not unlock in this browser. Use the browser where you registered."}
               </p>
             </div>
-            <div>
+            <div style={{ display: "flex", gap: "var(--space-sm)", flexWrap: "wrap" }}>
+              <button onClick={changeWallet} style={{ padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-text)", cursor: "pointer", minHeight: "var(--touch-target)" }}>
+                Change wallet
+              </button>
               <button onClick={disconnect} style={{ padding: "var(--space-sm) var(--space-md)", border: "1px solid var(--color-error)", borderRadius: "var(--radius-md)", background: "var(--color-bg)", color: "var(--color-error)", cursor: "pointer", minHeight: "var(--touch-target)" }}>
-                Disconnect wallet
+                Disconnect
               </button>
             </div>
           </>
