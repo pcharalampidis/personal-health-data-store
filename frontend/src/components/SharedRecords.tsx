@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import type { JsonRpcSigner, BrowserProvider } from "ethers";
 import { useDoctorAccess, type SharedRecord } from "../hooks/useDoctorAccess.js";
 import { RECORD_TYPES } from "../services/contracts.js";
-import { fromHex, decryptFile, unpackageEncrypted } from "../utils/encryption.js";
-import { importPrivateKeyJWK, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
+import { RecordViewer, type RecordViewerRecord } from "./RecordViewer.js";
 
 interface Props {
   account: string;
@@ -20,58 +19,32 @@ export function SharedRecords({ account, provider, signer }: Props) {
     logRecordAccess,
   } = useDoctorAccess(account, provider, signer);
 
-  const [viewingRecord, setViewingRecord] = useState<SharedRecord | null>(null);
-  const [loggingAccess, setLoggingAccess] = useState(false);
-  const [decrypting, setDecrypting] = useState<string | null>(null);
-  const [decryptError, setDecryptError] = useState("");
+  const [viewerRecord, setViewerRecord] = useState<RecordViewerRecord | null>(null);
+  const [activeRecordId, setActiveRecordId] = useState<bigint | null>(null);
 
   useEffect(() => {
     loadSharedRecords();
   }, [loadSharedRecords]);
 
-  const handleDecryptDownload = async (record: SharedRecord) => {
-    setDecrypting(String(record.recordId));
-    setDecryptError("");
-
-    try {
-      const privJwk = getStoredPrivateKeyJWK(account);
-      if (!privJwk) throw new Error("Private key not found. Re-register to generate keys.");
-
-      const rsaPrivKey = await importPrivateKeyJWK(privJwk);
-      const aesKey = await unwrapAESKey(fromHex(record.encryptedKey), rsaPrivKey);
-
-      const res = await fetch(`/api/records/fetch/${record.ipfsCID}`);
-      if (!res.ok) throw new Error("Failed to fetch from IPFS");
-      const { encryptedContent } = await res.json();
-
-      const raw = atob(encryptedContent);
-      const encryptedBytes = new Uint8Array(raw.length);
-      for (let i = 0; i < raw.length; i++) encryptedBytes[i] = raw.charCodeAt(i);
-
-      const { iv, encrypted } = unpackageEncrypted(encryptedBytes);
-      const decrypted = await decryptFile(encrypted, iv, aesKey);
-
-      const blob = new Blob([decrypted]);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `record-${record.recordId}`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      await logRecordAccess(record.recordId);
-    } catch (err) {
-      setDecryptError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setDecrypting(null);
-    }
+  const handleView = (record: SharedRecord) => {
+    setActiveRecordId(record.recordId);
+    setViewerRecord({
+      recordId: record.recordId,
+      owner: record.owner,
+      ipfsCID: record.ipfsCID,
+      contentHash: record.contentHash,
+      recordType: record.recordType,
+      status: record.status,
+      isEmergency: record.isEmergency,
+      createdAt: record.createdAt,
+      encryptedKey: record.encryptedKey,
+    });
   };
 
-  const handleViewRecord = async (record: SharedRecord) => {
-    setLoggingAccess(true);
-    await logRecordAccess(record.recordId);
-    setViewingRecord(record);
-    setLoggingAccess(false);
+  const handleAccessLogged = async () => {
+    if (activeRecordId != null) {
+      await logRecordAccess(activeRecordId);
+    }
   };
 
   const formatDate = (ts: bigint) =>
@@ -98,8 +71,6 @@ export function SharedRecords({ account, provider, signer }: Props) {
         </p>
       )}
 
-      {decryptError && <p style={styles.error}>{decryptError}</p>}
-
       <div style={styles.recordGrid}>
         {sharedRecords.map((record) => (
           <div key={String(record.recordId)} style={styles.recordCard}>
@@ -120,108 +91,31 @@ export function SharedRecords({ account, provider, signer }: Props) {
             </div>
 
             <div style={styles.recordDetails}>
-              <div>
-                <strong>Patient:</strong> {formatAddress(record.owner)}
-              </div>
-              <div>
-                <strong>CID:</strong> {record.ipfsCID.slice(0, 20)}...
-              </div>
-              <div style={styles.timestamp}>
-                Created: {formatDate(record.createdAt)}
-              </div>
+              <div><strong>Patient:</strong> {formatAddress(record.owner)}</div>
+              <div style={styles.timestamp}>Created: {formatDate(record.createdAt)}</div>
             </div>
 
             <div style={styles.recordActions}>
-              <button
-                style={styles.viewBtn}
-                onClick={() => handleDecryptDownload(record)}
-                disabled={decrypting === String(record.recordId)}
-              >
-                {decrypting === String(record.recordId) ? "Decrypting..." : "Decrypt & Download"}
-              </button>
-              <button
-                style={{ ...styles.viewBtn, background: "var(--color-bg)", color: "var(--color-text)", border: "1px solid var(--color-border)" }}
-                onClick={() => handleViewRecord(record)}
-                disabled={loggingAccess}
-              >
-                Details
+              <button style={styles.viewBtn} onClick={() => handleView(record)}>
+                View Record
               </button>
             </div>
           </div>
         ))}
       </div>
 
-      {viewingRecord && (
-        <div style={styles.modal} onClick={() => setViewingRecord(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>
-                Record #{String(viewingRecord.recordId)}
-              </h3>
-              <button
-                style={styles.closeBtn}
-                onClick={() => setViewingRecord(null)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={styles.modalBody}>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Record Type:</span>
-                <span>{RECORD_TYPES[viewingRecord.recordType] || "Unknown"}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Status:</span>
-                <span>{STATUS_LABELS[viewingRecord.status]}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Patient:</span>
-                <span style={styles.mono}>{viewingRecord.owner}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>IPFS CID:</span>
-                <span style={styles.mono}>{viewingRecord.ipfsCID}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Created:</span>
-                <span>{formatDate(viewingRecord.createdAt)}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Emergency Record:</span>
-                <span>{viewingRecord.isEmergency ? "Yes" : "No"}</span>
-              </div>
-
-              {viewingRecord.encryptedKey && viewingRecord.encryptedKey !== "0x" && (
-                <div style={styles.keySection}>
-                  <span style={styles.detailLabel}>Encrypted Key:</span>
-                  <code style={styles.keyCode}>
-                    {viewingRecord.encryptedKey.slice(0, 40)}...
-                  </code>
-                </div>
-              )}
-
-              <div style={styles.ipfsLink}>
-                <a
-                  href={`https://gateway.pinata.cloud/ipfs/${viewingRecord.ipfsCID}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.link}
-                >
-                  View on IPFS Gateway →
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+      {viewerRecord && (
+        <RecordViewer
+          account={account}
+          record={viewerRecord}
+          mode="doctor"
+          onClose={() => { setViewerRecord(null); setActiveRecordId(null); }}
+          onAccessLogged={handleAccessLogged}
+        />
       )}
 
       <div style={styles.refreshRow}>
-        <button
-          style={styles.refreshBtn}
-          onClick={loadSharedRecords}
-          disabled={loading}
-        >
+        <button style={styles.refreshBtn} onClick={loadSharedRecords} disabled={loading}>
           Refresh
         </button>
       </div>
@@ -304,7 +198,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     gap: "var(--space-xs)",
     marginBottom: "var(--space-sm)",
-    wordBreak: "break-all",
   },
   timestamp: {
     fontSize: "var(--font-sm)",
@@ -326,7 +219,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "var(--font-sm)",
     fontWeight: 500,
     minHeight: "var(--touch-target)",
-    flex: "1 1 auto",
   },
   refreshRow: {
     marginTop: "var(--space-md)",
@@ -340,101 +232,5 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     fontSize: "var(--font-sm)",
     minHeight: "var(--touch-target)",
-  },
-  modal: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "var(--space-md)",
-    zIndex: 1000,
-  },
-  modalContent: {
-    background: "var(--color-bg)",
-    borderRadius: "var(--radius-lg)",
-    maxWidth: "500px",
-    width: "100%",
-    maxHeight: "85vh",
-    overflow: "auto",
-  },
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "var(--space-md)",
-    borderBottom: "1px solid var(--color-border)",
-    position: "sticky",
-    top: 0,
-    background: "var(--color-bg)",
-  },
-  modalTitle: {
-    margin: 0,
-    fontSize: "var(--font-lg)",
-    fontWeight: 600,
-  },
-  closeBtn: {
-    background: "none",
-    border: "none",
-    fontSize: "var(--font-xl)",
-    cursor: "pointer",
-    color: "var(--color-text-light)",
-    padding: "var(--space-sm)",
-    minWidth: "var(--touch-target)",
-    minHeight: "var(--touch-target)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalBody: {
-    padding: "var(--space-md)",
-  },
-  detailRow: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "var(--space-xs)",
-    padding: "var(--space-sm) 0",
-    borderBottom: "1px solid var(--color-border)",
-    fontSize: "var(--font-base)",
-  },
-  detailLabel: {
-    fontWeight: 500,
-    color: "var(--color-text-muted)",
-    fontSize: "var(--font-sm)",
-  },
-  mono: {
-    fontFamily: "monospace",
-    fontSize: "var(--font-sm)",
-    wordBreak: "break-all",
-  },
-  keySection: {
-    marginTop: "var(--space-md)",
-    padding: "var(--space-sm)",
-    background: "var(--color-bg-secondary)",
-    borderRadius: "var(--radius-md)",
-  },
-  keyCode: {
-    display: "block",
-    marginTop: "var(--space-sm)",
-    fontSize: "var(--font-sm)",
-    fontFamily: "monospace",
-    wordBreak: "break-all",
-    color: "var(--color-text-muted)",
-  },
-  ipfsLink: {
-    marginTop: "var(--space-md)",
-    textAlign: "center",
-  },
-  link: {
-    color: "var(--color-accent)",
-    textDecoration: "none",
-    fontSize: "var(--font-base)",
-    fontWeight: 500,
-    display: "inline-block",
-    padding: "var(--space-sm)",
   },
 };

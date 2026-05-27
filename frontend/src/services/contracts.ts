@@ -20,6 +20,8 @@ const RECORD_MANAGER_ABI = [
   "function deleteRecord(uint256 _recordId) external",
   "function setEmergencyFlag(uint256 _recordId, bool _isEmergency) external",
   "function isRecordActive(uint256 _recordId) external view returns (bool)",
+  "function getEmergencyRecords(address _owner) external view returns (uint256[])",
+  "function restoreRecord(uint256 _recordId) external",
   "event RecordAdded(uint256 indexed recordId, address indexed owner, string ipfsCID, uint8 recordType, uint256 timestamp)",
 ];
 

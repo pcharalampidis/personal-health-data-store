@@ -4,11 +4,14 @@ import { getRecordManagerContract, RECORD_MANAGER_ADDRESS } from "../services/co
 
 export interface RecordInfo {
   recordId: bigint;
+  owner: string;
   ipfsCID: string;
+  contentHash: string;
   recordType: number;
   status: number;
   isEmergency: boolean;
   createdAt: bigint;
+  updatedAt: bigint;
 }
 
 export function useRecords(account: string | null, provider: BrowserProvider | null) {
@@ -36,11 +39,14 @@ export function useRecords(account: string | null, provider: BrowserProvider | n
         const rec = await contract.getRecord(id);
         loaded.push({
           recordId: rec.recordId,
+          owner: rec.owner,
           ipfsCID: rec.ipfsCID,
+          contentHash: rec.contentHash,
           recordType: Number(rec.recordType),
           status: Number(rec.status),
           isEmergency: rec.isEmergency,
           createdAt: rec.createdAt,
+          updatedAt: rec.updatedAt,
         });
       }
 

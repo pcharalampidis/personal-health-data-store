@@ -6,9 +6,9 @@ import {
   TRIGGER_TYPE_LABELS,
   type EmergencySession,
 } from "../hooks/useEmergencyAccess.js";
-import { fromHex, decryptFile, unpackageEncrypted } from "../utils/encryption.js";
-import { importPrivateKeyJWK, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
-import { getRecordManagerContract } from "../services/contracts.js";
+import { fromHex } from "../utils/encryption.js";
+import { getRecordManagerContract, getEmergencyAccessContract } from "../services/contracts.js";
+import { RecordViewer, type RecordViewerRecord } from "./RecordViewer.js";
 
 interface Props {
   account: string;
@@ -37,8 +37,8 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
   const [success, setSuccess] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [triggerFilter, setTriggerFilter] = useState<TriggerFilter>("all");
-  const [consumedRecords, setConsumedRecords] = useState<{ recordId: string; cid: string; doctorWrappedKey: string }[]>([]);
-  const [decryptingRecord, setDecryptingRecord] = useState<string | null>(null);
+  const [consumedRecords, setConsumedRecords] = useState<(RecordViewerRecord & { sessionId: bigint })[]>([]);
+  const [viewerRecord, setViewerRecord] = useState<(RecordViewerRecord & { sessionId: bigint }) | null>(null);
 
   useEffect(() => {
     loadSessions(role);
@@ -70,7 +70,13 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
     try {
       const result = await consumeEmergencyAccess(sessionId);
       if (result) {
-        // Try to parse emergency key package
+        const recordManager = getRecordManagerContract(provider!);
+        const emergencyContract = getEmergencyAccessContract(provider!);
+        const session = await emergencyContract.getSession(sessionId);
+        const records: (RecordViewerRecord & { sessionId: bigint })[] = [];
+
+        // Try Custodian package first
+        let isCustodianPkg = false;
         try {
           const raw = result.encryptedData;
           const clean = raw.startsWith("0x") ? raw.slice(2) : raw;
@@ -78,62 +84,58 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
           const pkg = JSON.parse(jsonStr);
 
           if (pkg.type === "custodian-emergency-key-package" && pkg.records?.length > 0) {
-            const recordManager = getRecordManagerContract(provider!);
-            const records: { recordId: string; cid: string; doctorWrappedKey: string }[] = [];
+            isCustodianPkg = true;
             for (const rec of pkg.records) {
               const record = await recordManager.getRecord(BigInt(rec.recordId));
-              records.push({ recordId: rec.recordId, cid: record.ipfsCID, doctorWrappedKey: rec.doctorWrappedKey });
+              records.push({
+                recordId: record.recordId,
+                owner: record.owner,
+                ipfsCID: record.ipfsCID,
+                contentHash: record.contentHash,
+                recordType: Number(record.recordType),
+                status: Number(record.status),
+                isEmergency: record.isEmergency,
+                createdAt: record.createdAt,
+                encryptedKey: rec.doctorWrappedKey,
+                sessionId,
+              });
             }
-            setConsumedRecords(records);
-            setSuccess(`Session #${sessionId} consumed. ${records.length} emergency record(s) available.`);
-          } else {
-            setSuccess(`Session #${sessionId} consumed.`);
           }
-        } catch {
-          setSuccess(`Session #${sessionId} consumed. You can now access emergency records.`);
+        } catch { /* not a custodian package */ }
+
+        // Trusted contact path: load emergency records + keys
+        if (!isCustodianPkg) {
+          const emergencyIds: bigint[] = await recordManager.getEmergencyRecords(session.patient);
+          for (const id of emergencyIds) {
+            try {
+              const key: string = await emergencyContract.getEmergencyKey(session.patient, id);
+              if (key && key !== "0x") {
+                const record = await recordManager.getRecord(id);
+                records.push({
+                  recordId: record.recordId,
+                  owner: record.owner,
+                  ipfsCID: record.ipfsCID,
+                  contentHash: record.contentHash,
+                  recordType: Number(record.recordType),
+                  status: Number(record.status),
+                  isEmergency: record.isEmergency,
+                  createdAt: record.createdAt,
+                  encryptedKey: key,
+                  sessionId,
+                });
+              }
+            } catch { /* skip records without keys */ }
+          }
         }
+
+        setConsumedRecords(records);
+        setSuccess(`Session #${sessionId} consumed. ${records.length} emergency record(s) available.`);
         await loadSessions(role);
       }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : String(err));
     } finally {
       setConsuming(null);
-    }
-  };
-
-  const handleDecryptEmergencyRecord = async (record: { recordId: string; cid: string; doctorWrappedKey: string }) => {
-    setDecryptingRecord(record.recordId);
-    setLocalError("");
-
-    try {
-      const privJwk = getStoredPrivateKeyJWK(account);
-      if (!privJwk) throw new Error("Private key not found. Re-register to generate keys.");
-
-      const rsaPrivKey = await importPrivateKeyJWK(privJwk);
-      const aesKey = await unwrapAESKey(fromHex(record.doctorWrappedKey), rsaPrivKey);
-
-      const res = await fetch(`/api/records/fetch/${record.cid}`);
-      if (!res.ok) throw new Error("Failed to fetch from IPFS");
-      const { encryptedContent } = await res.json();
-
-      const rawB64 = atob(encryptedContent);
-      const encryptedBytes = new Uint8Array(rawB64.length);
-      for (let i = 0; i < rawB64.length; i++) encryptedBytes[i] = rawB64.charCodeAt(i);
-
-      const { iv, encrypted } = unpackageEncrypted(encryptedBytes);
-      const decrypted = await decryptFile(encrypted, iv, aesKey);
-
-      const blob = new Blob([decrypted]);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `emergency-record-${record.recordId}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setLocalError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setDecryptingRecord(null);
     }
   };
 
@@ -266,18 +268,31 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
         <div style={styles.section}>
           <h3 style={styles.subheading}>Emergency Records Available</h3>
           {consumedRecords.map((rec) => (
-            <div key={rec.recordId} style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "var(--space-sm)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-xs)" }}>
-              <span style={{ fontFamily: "monospace", fontWeight: 600 }}>#{rec.recordId}</span>
+            <div key={String(rec.recordId)} style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", padding: "var(--space-sm)", border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-xs)" }}>
+              <span style={{ fontFamily: "monospace", fontWeight: 600 }}>#{String(rec.recordId)}</span>
               <button
                 style={styles.consumeBtn}
-                onClick={() => handleDecryptEmergencyRecord(rec)}
-                disabled={decryptingRecord === rec.recordId}
+                onClick={() => setViewerRecord(rec)}
               >
-                {decryptingRecord === rec.recordId ? "Decrypting..." : "Decrypt & Download"}
+                View Record
               </button>
             </div>
           ))}
         </div>
+      )}
+
+      {viewerRecord && (
+        <RecordViewer
+          account={account}
+          record={viewerRecord}
+          mode="emergency"
+          onClose={() => setViewerRecord(null)}
+          onAccessLogged={async () => {
+            const emergencyContract = getEmergencyAccessContract(signer);
+            const tx = await emergencyContract.logEmergencyRecordAccess(viewerRecord.sessionId, viewerRecord.recordId);
+            await tx.wait();
+          }}
+        />
       )}
 
       {activeSessions.length > 0 && (

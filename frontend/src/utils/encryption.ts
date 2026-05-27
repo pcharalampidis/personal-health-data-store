@@ -98,8 +98,7 @@ export function toHex(data: Uint8Array): string {
 }
 
 /**
- * Convert a Uint8Array to a base64 string efficiently.
- * Avoids stack overflow with large arrays.
+ * Convert a Uint8Array to a base64 string
  */
 export function toBase64(data: Uint8Array): string {
   // Process in chunks to avoid stack overflow
@@ -112,6 +111,16 @@ export function toBase64(data: Uint8Array): string {
   }
   
   return btoa(result);
+}
+
+/**
+ * Convert a base64 string back to Uint8Array.
+ */
+export function fromBase64(value: string): Uint8Array {
+  const raw = atob(value);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return bytes;
 }
 
 /**

@@ -87,6 +87,7 @@ function App() {
                   key={refreshKey}
                   account={account}
                   provider={provider}
+                  signer={signer}
                 />
                 <PermissionManager
                   account={account}

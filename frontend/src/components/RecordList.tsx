@@ -1,19 +1,25 @@
 import React, { useEffect, useState, useMemo } from "react";
-import type { BrowserProvider } from "ethers";
+import type { BrowserProvider, JsonRpcSigner } from "ethers";
 import { getRecordManagerContract, RECORD_TYPES, RECORD_MANAGER_ADDRESS } from "../services/contracts.js";
+import { RecordViewer, type RecordViewerRecord } from "./RecordViewer.js";
+import { ConfirmModal } from "./ConfirmModal.js";
 
 interface RecordInfo {
   recordId: bigint;
+  owner: string;
   ipfsCID: string;
+  contentHash: string;
   recordType: number;
   status: number;
   isEmergency: boolean;
   createdAt: bigint;
+  updatedAt: bigint;
 }
 
 interface Props {
   account: string;
   provider: BrowserProvider;
+  signer?: JsonRpcSigner;
 }
 
 const STATUS_LABELS = ["Active", "Archived", "Deleted"];
@@ -21,7 +27,7 @@ const STATUS_LABELS = ["Active", "Archived", "Deleted"];
 type StatusFilter = "all" | "active" | "archived" | "deleted";
 type EmergencyFilter = "all" | "emergency" | "normal";
 
-export function RecordList({ account, provider }: Props) {
+export function RecordList({ account, provider, signer }: Props) {
   const [records, setRecords] = useState<RecordInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,6 +35,10 @@ export function RecordList({ account, provider }: Props) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [emergencyFilter, setEmergencyFilter] = useState<EmergencyFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewerRecord, setViewerRecord] = useState<RecordViewerRecord | null>(null);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [actionPending, setActionPending] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: string; record: RecordInfo } | null>(null);
 
   useEffect(() => {
     loadRecords();
@@ -56,11 +66,14 @@ export function RecordList({ account, provider }: Props) {
         const rec = await contract.getRecord(id);
         loaded.push({
           recordId: rec.recordId,
+          owner: rec.owner,
           ipfsCID: rec.ipfsCID,
+          contentHash: rec.contentHash,
           recordType: Number(rec.recordType),
           status: Number(rec.status),
           isEmergency: rec.isEmergency,
           createdAt: rec.createdAt,
+          updatedAt: rec.updatedAt,
         });
       }
 
@@ -122,6 +135,78 @@ export function RecordList({ account, provider }: Props) {
     statusFilter !== "all" ||
     emergencyFilter !== "all" ||
     searchTerm !== "";
+
+  const handleView = async (r: RecordInfo) => {
+    setLoadingKey(String(r.recordId));
+    try {
+      const contract = getRecordManagerContract(provider);
+      const encryptedKey: string = await contract.getEncryptedKey(r.recordId, account);
+      setViewerRecord({
+        recordId: r.recordId,
+        owner: r.owner,
+        ipfsCID: r.ipfsCID,
+        contentHash: r.contentHash,
+        recordType: r.recordType,
+        status: r.status,
+        isEmergency: r.isEmergency,
+        createdAt: r.createdAt,
+        encryptedKey,
+      });
+    } catch {
+      setError("Could not load record key.");
+    } finally {
+      setLoadingKey(null);
+    }
+  };
+
+  const executeAction = async () => {
+    if (!confirmAction || !signer) return;
+    setActionPending(true);
+    try {
+      const contract = getRecordManagerContract(signer);
+      let tx;
+      switch (confirmAction.type) {
+        case "archive":
+          tx = await contract.archiveRecord(confirmAction.record.recordId);
+          break;
+        case "restore":
+          tx = await contract.restoreRecord(confirmAction.record.recordId);
+          break;
+        case "emergency-on":
+          tx = await contract.setEmergencyFlag(confirmAction.record.recordId, true);
+          break;
+        case "emergency-off":
+          tx = await contract.setEmergencyFlag(confirmAction.record.recordId, false);
+          break;
+        default:
+          return;
+      }
+      await tx.wait();
+      setConfirmAction(null);
+      loadRecords();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setConfirmAction(null);
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const getConfirmProps = () => {
+    if (!confirmAction) return null;
+    switch (confirmAction.type) {
+      case "archive":
+        return { title: "Archive this record?", message: "This makes the record inactive in the app. It does not erase blockchain history or encrypted IPFS copies.", confirmLabel: "Archive" };
+      case "restore":
+        return { title: "Restore this record?", message: "This makes the record active again. If old permissions were not revoked, access rules may apply again.", confirmLabel: "Restore", confirmStyle: "primary" as const };
+      case "emergency-on":
+        return { title: "Mark as emergency record?", message: "Emergency records can be opened during approved emergency sessions. Only mark records useful in urgent care.", confirmLabel: "Mark emergency", confirmStyle: "primary" as const };
+      case "emergency-off":
+        return { title: "Remove emergency flag?", message: "This record will no longer be available during emergency sessions.", confirmLabel: "Remove flag" };
+      default:
+        return null;
+    }
+  };
 
   return (
     <div style={styles.card}>
@@ -221,8 +306,56 @@ export function RecordList({ account, provider }: Props) {
             <span>CID: {r.ipfsCID.slice(0, 20)}...</span>
             <span>Created: {formatDate(r.createdAt)}</span>
           </div>
+          {r.status === 0 && (
+            <div style={styles.recordActions}>
+              <button
+                style={styles.viewBtn}
+                onClick={() => handleView(r)}
+                disabled={loadingKey === String(r.recordId)}
+              >
+                {loadingKey === String(r.recordId) ? "Loading…" : "View"}
+              </button>
+              {signer && (
+                <>
+                  <button style={styles.actionBtn} onClick={() => setConfirmAction({ type: r.isEmergency ? "emergency-off" : "emergency-on", record: r })}>
+                    {r.isEmergency ? "Remove emergency" : "Mark emergency"}
+                  </button>
+                  <button style={styles.archiveBtn} onClick={() => setConfirmAction({ type: "archive", record: r })}>
+                    Archive
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {r.status === 1 && signer && (
+            <div style={styles.recordActions}>
+              <button style={styles.viewBtn} onClick={() => handleView(r)} disabled={loadingKey === String(r.recordId)}>
+                {loadingKey === String(r.recordId) ? "Loading…" : "View"}
+              </button>
+              <button style={styles.actionBtn} onClick={() => setConfirmAction({ type: "restore", record: r })}>
+                Restore
+              </button>
+            </div>
+          )}
         </div>
       ))}
+
+      {viewerRecord && (
+        <RecordViewer
+          account={account}
+          record={viewerRecord}
+          mode="owner"
+          onClose={() => setViewerRecord(null)}
+        />
+      )}
+
+      {confirmAction && getConfirmProps() && (
+        <ConfirmModal
+          {...getConfirmProps()!}
+          onConfirm={executeAction}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
     </div>
   );
 }
@@ -337,5 +470,41 @@ const styles: Record<string, React.CSSProperties> = {
     color: "var(--color-text-light)",
     fontFamily: "monospace",
     wordBreak: "break-all",
+  },
+  recordActions: {
+    marginTop: "var(--space-sm)",
+    display: "flex",
+    gap: "var(--space-sm)",
+  },
+  viewBtn: {
+    padding: "var(--space-sm) var(--space-md)",
+    border: "none",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-primary)",
+    color: "#fff",
+    cursor: "pointer",
+    fontSize: "var(--font-sm)",
+    fontWeight: 500,
+    minHeight: "var(--touch-target)",
+  },
+  actionBtn: {
+    padding: "var(--space-sm) var(--space-md)",
+    border: "1px solid var(--color-border)",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-bg)",
+    color: "var(--color-text)",
+    cursor: "pointer",
+    fontSize: "var(--font-sm)",
+    minHeight: "var(--touch-target)",
+  },
+  archiveBtn: {
+    padding: "var(--space-sm) var(--space-md)",
+    border: "1px solid var(--color-warning, #f59e0b)",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-bg)",
+    color: "var(--color-warning, #f59e0b)",
+    cursor: "pointer",
+    fontSize: "var(--font-sm)",
+    minHeight: "var(--touch-target)",
   },
 };

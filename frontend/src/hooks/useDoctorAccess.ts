@@ -22,10 +22,12 @@ export interface SharedRecord {
   recordId: bigint;
   owner: string;
   ipfsCID: string;
+  contentHash: string;
   recordType: number;
   status: number;
   isEmergency: boolean;
   createdAt: bigint;
+  updatedAt: bigint;
   hasAccess: boolean;
   encryptedKey: string;
 }
@@ -109,10 +111,12 @@ export function useDoctorAccess(
             recordId: record.recordId,
             owner: record.owner,
             ipfsCID: record.ipfsCID,
+            contentHash: record.contentHash,
             recordType: Number(record.recordType),
             status: Number(record.status),
             isEmergency: record.isEmergency,
             createdAt: record.createdAt,
+            updatedAt: record.updatedAt,
             hasAccess,
             encryptedKey,
           });
