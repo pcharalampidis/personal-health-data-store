@@ -1,7 +1,7 @@
 # Current Implementation Baseline
 
 Baseline date: 2026-05-27  
-Last validated commit: `1c97970`
+Last validated commit: `43160bf`
 
 ## Purpose
 
@@ -35,15 +35,22 @@ All contracts: 151 tests passing.
 
 | Area | Status |
 |---|---|
-| Wallet connection | MetaMask, role detection |
+| Wallet connection | MetaMask, role detection, change wallet support |
 | Registration | Patient/doctor with RSA-OAEP 2048-bit keypair generation |
-| Upload | AES-256-GCM encryption, RSA key wrapping, IPFS pin, on-chain reference |
-| Record list | Metadata display with filters (type, status, emergency) |
-| Grant/revoke access | Unwrap patient key → re-wrap for doctor, permission management |
-| Doctor shared records | Decrypt & download with doctor RSA private key |
-| Emergency config | Trusted contacts, emergency flag toggle, key sync for contacts + Custodian |
-| Emergency trigger | Doctor triggers session (trusted or Custodian path) |
-| Emergency sessions | Session management, Custodian package parsing, decrypt/download |
+| Upload | PHDS2 packaging, AES-256-GCM, RSA key wrapping, stepper UX, file validation |
+| Record list | Cards with View/Archive/Restore/Emergency toggle/Remove from vault actions |
+| Record viewer | Unified RecordViewer: PDF/image/JSON preview, integrity badge, decrypt states |
+| Grant/revoke access | Unwrap patient key → re-wrap for doctor, ConfirmModal on revoke |
+| Doctor shared records | RecordViewer in doctor mode, access logged after decrypt |
+| Emergency config | Trusted contacts, emergency flag toggle, prepare emergency keys |
+| Emergency trigger | "Request emergency access" with ConfirmModal, serious wording |
+| Emergency sessions | "Open emergency session", RecordViewer integration, "End session" with ConfirmModal |
+| App shell | Desktop sidebar + mobile bottom nav, role-based pages |
+| Patient pages | Records, Access, Emergency, Settings |
+| Doctor pages | Shared, Request, Emergency, Settings |
+| Settings | Account info, local key status (green/amber), Privacy & Security info |
+| Error handling | Friendly error messages (no raw ethers errors), change wallet button |
+| Action semantics | Plain language, confirmations, TechnicalDetails collapsed |
 
 ### Cryptography
 
@@ -71,19 +78,33 @@ All contracts: 151 tests passing.
 
 ---
 
-## Remaining Gaps (Post-M4)
+## Resolved in Track B + M5 + Final Polish (commits `56d9571` → `43160bf`)
 
-| Gap | Target |
+| Gap | Resolution |
 |---|---|
-| Visual app shell / navigation | M5 (sidebar desktop, bottom nav mobile) |
-| Action semantics / disclosure wording | Track B (AS-1 to AS-8) |
-| Privacy/Security info page | AS-8 |
-| Activity/audit timeline page | M5 or stretch |
-| Paused contract UX | Not yet surfaced to user |
+| Visual app shell / navigation | Desktop sidebar + mobile bottom nav (M5.2) |
+| Action semantics / disclosure wording | USER_ACTION_SEMANTICS.md + all components updated (Track B) |
+| Privacy/Security info page | PrivacySecurityInfo.tsx with 7 expandable sections (AS-8) |
+| Raw wallet errors | errorMessages.ts + friendlyErrorMessage() (FP-8a) |
+| No change wallet option | changeWallet() in useWallet hook (FP-8a) |
+| Upload form always visible | Collapsed behind "Upload record" button (FP-2) |
+| Delete record not exposed | "Remove from vault" button: unpin + deleteRecord + warning (FP-8b) |
+| App shell in App.tsx | Extracted AppShell/Sidebar/MobileBottomNav components (FP-3) |
+| Settings minimal | Account info, local key status card, privacy info (FP-4) |
 
 ---
 
-## Known Limitations (Documented, Not Bugs)
+## Remaining Gaps (Known Limitations, Not Bugs)
+
+| Gap | Notes |
+|---|---|
+| Activity/audit timeline page | Contract events exist; no UI timeline yet |
+| Paused contract UX | Contracts have pause; no user-facing maintenance banner |
+| Key backup/export | localStorage only; no backup mechanism (MVP trade-off) |
+
+---
+
+## Known Limitations (Documented)
 
 1. RSA private keys in localStorage — vulnerable to XSS (MVP trade-off)
 2. No key rotation mechanism

@@ -31,18 +31,19 @@ Scope tiers:
 | core | 15 |
 | stretch | 0 |
 
-Last roll-up update: 2026-05-27
+Last roll-up update: 2026-05-27 (post FP-8)
 
-## UX Readiness (Milestone 4 Targets)
+## UX Readiness (Final State)
 
-| Requirement | Functional | UX Status | M4 Target |
-|---|---|---|---|
-| FR-006 Upload | validated | needs polish — debug UI, no stepper | M4.7 |
-| FR-008 Retrieval | validated | weak — patient self-view missing | M4.4 |
-| FR-011 Grant Access | validated | acceptable | — |
-| FR-013 Shared Records | validated | medium — duplicated decrypt logic | M4.5 |
-| FR-014c Emergency Retrieval | validated | needs polish — trusted-contact incomplete | M4.6 |
-| FR-016 Audit Trail | validated | basic — logs on metadata view not decrypt | M4.5, M4.6 |
+| Requirement | Functional | UX Status |
+|---|---|---|
+| FR-006 Upload | validated | Good — PHDS2 packaging, stepper, file validation, no debug |
+| FR-008 Retrieval | validated | Good — RecordViewer with preview, integrity badge, decrypt states |
+| FR-009 Record lifecycle | validated | Good — archive/restore/delete with confirmations |
+| FR-011 Grant Access | validated | Good — ConfirmModal on revoke, plain language |
+| FR-013 Shared Records | validated | Good — RecordViewer, access logged after decrypt |
+| FR-014c Emergency Retrieval | validated | Good — trusted-contact + Custodian paths, RecordViewer |
+| FR-016 Audit Trail | validated | Good — logs after decrypt, not metadata view |
 
 ---
 
@@ -106,11 +107,11 @@ Last roll-up update: 2026-05-27
 - Status: `validated`
 - Scope Tier: `core`
 - Owner: `developer+agent`
-- Linked TODO tasks: `M1.3`, `M1.4`
+- Linked TODO tasks: `M1.3`, `M1.4`, `M4.4`
 - Linked tests: `RM-T19`, `RM-T20`, `RM-T21`, E2E tests
-- Model Notes: Owner retrieval flow is part of the first full vertical slice. E2E tests validate CID retrieval and content hash verification.
-- Evidence links: `contracts/RecordManager.sol` (getRecord, getRecordsByOwner, getRecordCID, getEncryptedKey), `test/e2e-upload.test.ts`, `frontend/src/components/RecordList.tsx`, `backend/src/routes/records.ts` (fetch endpoint)
-- Last updated: `2026-04-30`
+- Model Notes: Patient self-view/download now complete via RecordViewer. Hash verification blocks retrieval on mismatch. PHDS2 format preserves filename/MIME inside encrypted payload.
+- Evidence links: `contracts/RecordManager.sol`, `frontend/src/components/RecordList.tsx`, `frontend/src/components/RecordViewer.tsx`, `frontend/src/utils/recordRetrieval.ts`, `frontend/src/utils/recordPackage.ts`
+- Last updated: `2026-05-27`
 
 ## FR-011 - Grant Access to a Doctor
 

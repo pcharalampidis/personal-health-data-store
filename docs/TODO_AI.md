@@ -934,3 +934,79 @@ Result summary:
 Follow-up tasks:
 - None
 ```
+
+---
+
+## Track B — Action Semantics & Disclosure (Complete)
+
+### [x] AS-1 to AS-8 — Action Semantics & Disclosure
+
+Files touched:
+- docs/USER_ACTION_SEMANTICS.md (new)
+- frontend/src/components/TechnicalDetails.tsx (new)
+- frontend/src/components/PrivacySecurityInfo.tsx (new)
+- frontend/src/components/EmergencyTrigger.tsx
+- frontend/src/components/EmergencyConfig.tsx
+- frontend/src/components/EmergencySessions.tsx
+- frontend/src/components/PermissionManager.tsx
+- frontend/src/hooks/useEmergencyAccess.ts
+
+Result summary:
+- Created canonical action semantics document (14 actions)
+- Standardised terminology (Trigger→Request, Consume→Open, Sync→Prepare)
+- Added TechnicalDetails component, all raw data collapsed
+- Added ConfirmModal to revoke access, end session, request emergency
+- Archive primary, Delete not exposed (until FP-8b)
+- Doctor audit notice + access logged after decrypt only
+- Privacy/Security info page (7 expandable sections)
+
+---
+
+## Milestone 5 — UI Redesign (Complete)
+
+### [x] M5.1 to M5.8 — Responsive App Shell + UI Redesign
+
+Files touched:
+- frontend/src/index.css (healthcare palette, app shell CSS)
+- frontend/src/App.tsx (page-based navigation, AppShell)
+- frontend/src/components/RecordList.tsx (empty state)
+
+Result summary:
+- Healthcare colour palette (blue #2563eb, teal #14b8a6, slate text)
+- Desktop sidebar (≥1024px) with role-based navigation
+- Mobile bottom nav with 4 items
+- Patient pages: Records, Access, Emergency, Settings
+- Doctor pages: Shared, Request, Emergency, Settings
+- Page headers with title + description
+- Clean landing page + registration flow
+- Records empty state with dashed border
+
+---
+
+## Final Polish Pass (Complete)
+
+### [x] FP-1 to FP-8 — Final UI Polish
+
+Files touched:
+- frontend/src/App.tsx
+- frontend/src/index.css
+- frontend/src/hooks/useWallet.ts
+- frontend/src/utils/errorMessages.ts (new)
+- frontend/src/components/layout/AppShell.tsx (new)
+- frontend/src/components/layout/Sidebar.tsx (new)
+- frontend/src/components/layout/MobileBottomNav.tsx (new)
+- frontend/src/components/RecordList.tsx
+- frontend/src/components/UploadRecord.tsx
+- docs/UI_MOBILE_QA.md (new)
+- docs/FINAL_WORKFLOW_STATUS.md (new)
+
+Result summary:
+- Nav icons updated (📄🔐🚨⚙️ / 👥✉️🚨⚙️)
+- Upload collapsed behind "Upload record" button
+- Extracted AppShell/Sidebar/MobileBottomNav components
+- Settings: account info, local key status card, privacy info
+- Friendly error messages (no raw ethers errors)
+- Change wallet button
+- "Remove from vault" button (unpin + deleteRecord + warning)
+- Mobile QA documentation
+- Final workflow status documentation

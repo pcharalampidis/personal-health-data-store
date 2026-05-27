@@ -16,9 +16,42 @@ Keep entries short and factual for dissertation traceability.
   - Docs: <files updated or "None">
 ```
 
-## 2026-05-27
+## 2026-05-27 (Track B + M5 + Final Polish)
 
-- Change: Completed Milestone 4 — Retrieval + UI/UX Hardening (M4.1–M4.9)
+- Change: Track B — Action Semantics & Disclosure (AS-1 to AS-8)
+- Reason: Make every sensitive action honest, non-technical, and safe for health-record users.
+- Impact:
+  - Requirements: NFR-013, NFR-014, NFR-016
+  - Tests: None (UI/UX changes)
+  - New files: `docs/USER_ACTION_SEMANTICS.md`, `frontend/src/components/TechnicalDetails.tsx`, `frontend/src/components/PrivacySecurityInfo.tsx`
+  - Modified: `EmergencyTrigger.tsx` (Trigger→Request), `EmergencyConfig.tsx` (Sync→Prepare), `EmergencySessions.tsx` (Consumed→Opened, ConfirmModal), `PermissionManager.tsx` (ConfirmModal on revoke), `useEmergencyAccess.ts` (status labels)
+
+- Change: M5 — Responsive app shell and UI redesign
+- Reason: Transform app from single stacked demo page to role-based health vault interface.
+- Impact:
+  - Requirements: NFR-013, NFR-014, NFR-015
+  - Tests: None (UI/UX changes)
+  - New files: `frontend/src/components/layout/AppShell.tsx`, `frontend/src/components/layout/Sidebar.tsx`, `frontend/src/components/layout/MobileBottomNav.tsx`
+  - Modified: `frontend/src/index.css` (healthcare palette, app shell CSS), `frontend/src/App.tsx` (page-based navigation, AppShell, clean landing)
+  - Features: Desktop sidebar (≥1024px), mobile bottom nav, patient pages (Records/Access/Emergency/Settings), doctor pages (Shared/Request/Emergency/Settings), page headers
+
+- Change: Final Polish Pass (FP-1 to FP-8)
+- Reason: Finish remaining polish for dissertation demo readiness.
+- Impact:
+  - Requirements: NFR-013, NFR-014, NFR-015, NFR-016
+  - Tests: 22 frontend tests passing
+  - New files: `frontend/src/utils/errorMessages.ts`, `docs/UI_MOBILE_QA.md`, `docs/FINAL_WORKFLOW_STATUS.md`
+  - Modified: `frontend/src/hooks/useWallet.ts` (changeWallet), `frontend/src/App.tsx` (upload collapsed, settings with key status), `frontend/src/components/RecordList.tsx` (Remove from vault button, friendlyErrorMessage), `frontend/src/components/UploadRecord.tsx` (friendlyErrorMessage)
+  - Features:
+    - Upload collapsed behind "Upload record" button (FP-2)
+    - Friendly error messages replacing raw ethers errors (FP-8a)
+    - Change wallet button in settings (FP-8a)
+    - "Remove from vault" button: unpin IPFS + deleteRecord + warning modal (FP-8b)
+    - Settings: account info, local key status card, privacy info (FP-4)
+    - Mobile QA documentation (FP-6)
+    - Final workflow status documentation (FP-7)
+
+## 2026-05-27 (M4 correction pass)
 - Reason: Make the app functionally complete for dissertation demo. Patient self-view was missing, decrypt logic was duplicated, upload UX was technical, emergency retrieval was incomplete.
 - Impact:
   - Requirements: FR-006, FR-008, FR-013, FR-014c, FR-016
