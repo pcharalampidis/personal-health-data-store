@@ -273,7 +273,10 @@ export function RecordList({ account, provider, signer }: Props) {
       {error && <p style={styles.error}>{error}</p>}
 
       {!loading && !error && records.length === 0 && (
-        <p style={styles.muted}>No records found. Upload your first health record above.</p>
+        <div style={styles.emptyState}>
+          <p style={styles.emptyTitle}>No health records yet</p>
+          <p style={styles.emptyHint}>Upload your first encrypted health record. Files are encrypted in your browser before being stored.</p>
+        </div>
       )}
 
       {!loading && !error && records.length > 0 && filteredRecords.length === 0 && (
@@ -425,6 +428,24 @@ const styles: Record<string, React.CSSProperties> = {
   muted: {
     color: "var(--color-text-light)",
     fontSize: "var(--font-base)",
+  },
+  emptyState: {
+    textAlign: "center",
+    padding: "var(--space-xl) var(--space-md)",
+    background: "var(--color-surface-muted, var(--color-bg-secondary))",
+    borderRadius: "var(--radius-lg)",
+    border: "1px dashed var(--color-border)",
+  },
+  emptyTitle: {
+    fontSize: "var(--font-lg)",
+    fontWeight: 600,
+    color: "var(--color-text)",
+    margin: "0 0 var(--space-xs)",
+  },
+  emptyHint: {
+    fontSize: "var(--font-sm)",
+    color: "var(--color-text-muted)",
+    margin: 0,
   },
   error: {
     color: "var(--color-error)",
