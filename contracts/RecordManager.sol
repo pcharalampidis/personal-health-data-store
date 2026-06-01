@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 import "./interfaces/IUserRegistry.sol";
@@ -7,15 +6,9 @@ import "./interfaces/IRecordManager.sol";
 /**
  * @title RecordManager
  * @notice Manages on-chain references to encrypted off-chain health records.
- * @dev Custom Ownable + Pausable + ReentrancyGuard (no OpenZeppelin).
- *      Stores IPFS CIDs, content hashes, and per-user encrypted AES keys.
- *      Actual health data lives encrypted on IPFS; this contract never
- *      sees plaintext.
- *
- * Requirements Covered: FR-006, FR-007, FR-008, FR-009, FR-010, FR-015
  */
 contract RecordManager is IRecordManager {
-    // ── Custom Ownable ──────────────────────────────
+    
     address public owner;
 
     modifier onlyOwner() {
@@ -23,7 +16,6 @@ contract RecordManager is IRecordManager {
         _;
     }
 
-    // ── Custom Pausable ─────────────────────────────
     bool private _paused;
 
     modifier whenNotPaused() {
@@ -44,7 +36,7 @@ contract RecordManager is IRecordManager {
         emit Unpaused(msg.sender);
     }
 
-    // ── Custom ReentrancyGuard ──────────────────────
+    // ──ReentrancyGuard ──────────────────────
     uint256 private constant _NOT_ENTERED = 1;
     uint256 private constant _ENTERED = 2;
     uint256 private _status;

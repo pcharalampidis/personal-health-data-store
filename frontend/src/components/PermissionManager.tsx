@@ -9,6 +9,9 @@ import {
 import { RECORD_TYPES, getRecordManagerContract, getUserRegistryContract } from "../services/contracts.js";
 import { fromHex, toHex } from "../utils/encryption.js";
 import { importPublicKeyJWK, importPrivateKeyJWK, wrapAESKey, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
+import { useDoctorProfiles } from "../hooks/useDoctorProfiles.js";
+import { DoctorIdentityCard } from "./DoctorIdentityCard.js";
+import type { DoctorIdentity } from "../types/profiles.js";
 
 interface Props {
   account: string;
@@ -52,10 +55,40 @@ export function PermissionManager({ account, provider, signer, records }: Props)
   const [batchProcessing, setBatchProcessing] = useState(false);
   const [, setTick] = useState(0);
 
+  const { resolveDoctor } = useDoctorProfiles(provider);
+  const [doctorProfiles, setDoctorProfiles] = useState<Record<string, DoctorIdentity>>({});
+
   useEffect(() => {
     loadPendingRequests();
     loadPermissions();
   }, [loadPendingRequests, loadPermissions]);
+
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      const addresses = new Set<string>();
+      pendingRequests.forEach((r) => addresses.add(r.doctor.toLowerCase()));
+      permissions.forEach((p) => addresses.add(p.grantedTo.toLowerCase()));
+
+      const profilesMap: Record<string, DoctorIdentity> = { ...doctorProfiles };
+      let updated = false;
+
+      for (const addr of addresses) {
+        if (!profilesMap[addr]) {
+          const profile = await resolveDoctor(addr);
+          profilesMap[addr] = profile;
+          updated = true;
+        }
+      }
+
+      if (updated) {
+        setDoctorProfiles(profilesMap);
+      }
+    };
+
+    if (pendingRequests.length > 0 || permissions.length > 0) {
+      fetchProfiles();
+    }
+  }, [pendingRequests, permissions, resolveDoctor]);
 
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 60000);
@@ -276,8 +309,23 @@ export function PermissionManager({ account, provider, signer, records }: Props)
                       <span style={styles.badge}>Pending</span>
                     </div>
                     <div style={styles.itemDetails}>
-                      <div>
-                        <strong>Doctor:</strong> {formatAddress(req.doctor)}
+                      <div style={{ marginBottom: "var(--space-xs)" }}>
+                        <strong>Doctor:</strong>
+                        <DoctorIdentityCard
+                          profile={doctorProfiles[req.doctor.toLowerCase()] || {
+                            address: req.doctor,
+                            name: "Loading doctor profile...",
+                            licenseNumber: "",
+                            specialty: "",
+                            institution: "",
+                            registeredAt: null,
+                            isVerified: false,
+                            displayName: formatAddress(req.doctor),
+                            displaySubtitle: "Retrieving credentials...",
+                            formattedAddress: formatAddress(req.doctor),
+                          }}
+                          compact={false}
+                        />
                       </div>
                       <div>
                         <strong>Records:</strong>{" "}
@@ -353,8 +401,23 @@ export function PermissionManager({ account, provider, signer, records }: Props)
                           </span>
                         </div>
                         <div style={styles.itemDetails}>
-                          <div>
-                            <strong>Granted to:</strong> {formatAddress(perm.grantedTo)}
+                          <div style={{ marginBottom: "var(--space-xs)" }}>
+                            <strong>Granted to:</strong>
+                            <DoctorIdentityCard
+                              profile={doctorProfiles[perm.grantedTo.toLowerCase()] || {
+                                address: perm.grantedTo,
+                                name: "Loading doctor profile...",
+                                licenseNumber: "",
+                                specialty: "",
+                                institution: "",
+                                registeredAt: null,
+                                isVerified: false,
+                                displayName: formatAddress(perm.grantedTo),
+                                displaySubtitle: "Retrieving credentials...",
+                                formattedAddress: formatAddress(perm.grantedTo),
+                              }}
+                              compact={true}
+                            />
                           </div>
                           <div>
                             <strong>Granted:</strong> {formatDate(perm.grantedAt)}
@@ -400,8 +463,24 @@ export function PermissionManager({ account, provider, signer, records }: Props)
                           </span>
                         </div>
                         <div style={styles.itemDetails}>
-                          <div>
-                            <strong>Was granted to:</strong> {formatAddress(perm.grantedTo)}
+                          <div style={{ marginBottom: "var(--space-xs)" }}>
+                            <strong>Was granted to:</strong>
+                            <DoctorIdentityCard
+                              profile={doctorProfiles[perm.grantedTo.toLowerCase()] || {
+                                address: perm.grantedTo,
+                                name: "Loading doctor profile...",
+                                licenseNumber: "",
+                                specialty: "",
+                                institution: "",
+                                registeredAt: null,
+                                isVerified: false,
+                                displayName: formatAddress(perm.grantedTo),
+                                displaySubtitle: "Retrieving credentials...",
+                                formattedAddress: formatAddress(perm.grantedTo),
+                              }}
+                              compact={true}
+                              showVerificationNote={false}
+                            />
                           </div>
                           <div>
                             <strong>Expired:</strong> {formatDate(perm.expiresAt)}
@@ -433,7 +512,7 @@ export function PermissionManager({ account, provider, signer, records }: Props)
       {confirmRevoke && (
         <ConfirmModal
           title="Stop future access?"
-          message="This doctor will no longer be able to open this record through the app. This cannot delete copies they may have already downloaded."
+          message={`Stop access for ${doctorProfiles[confirmRevoke.grantedTo.toLowerCase()]?.displayName || formatAddress(confirmRevoke.grantedTo)}? This doctor will no longer be able to open this record through the app. This cannot delete copies they may have already downloaded.`}
           confirmLabel="Revoke access"
           onConfirm={executeRevoke}
           onCancel={() => setConfirmRevoke(null)}

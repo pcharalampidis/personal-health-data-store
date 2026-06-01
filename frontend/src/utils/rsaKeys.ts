@@ -1,9 +1,6 @@
 /**
  * RSA-OAEP key wrapping utilities for health record encryption.
  * Uses RSA-OAEP with SHA-256, 2048-bit keys via Web Crypto API.
- *
- * Architecture: AES-GCM record keys are wrapped (encrypted) with RSA public keys
- * so that only the holder of the corresponding private key can unwrap them.
  */
 
 import { toHex, fromHex } from "./encryption.js";

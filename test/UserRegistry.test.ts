@@ -125,7 +125,6 @@ describe("UserRegistry", function () {
     });
 
     it("should consider registered doctor as verified (on-chain)", async function () {
-      // Note: Detailed verification for emergency access checks Custodian registry off-chain
       await userRegistry.connect(doctor1).registerAsDoctor(
         "Dr. Smith", "LIC-001", "Cardiology", "Hospital", SAMPLE_PUB_KEY
       );

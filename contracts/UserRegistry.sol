@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 import "./interfaces/IUserRegistry.sol";
@@ -6,12 +5,8 @@ import "./interfaces/IUserRegistry.sol";
 /**
  * @title UserRegistry
  * @notice Manages wallet-based identity, role assignment, and encryption public key storage.
- * @dev 
- *
- * Requirements Covered: FR-001, FR-003, FR-004, FR-005, NFR-006
  */
 contract UserRegistry is IUserRegistry {
-    // ── Custom Ownable ──────────────────────────────
     address public owner;
 
     modifier onlyOwner() {
@@ -19,7 +14,6 @@ contract UserRegistry is IUserRegistry {
         _;
     }
 
-    // ── Custom Pausable ─────────────────────────────
     bool private _paused;
 
     modifier whenNotPaused() {

@@ -8,6 +8,7 @@ const USER_REGISTRY_ABI = [
   "function getUserProfile(address _user) external view returns (tuple(uint8 role, bool isRegistered, bytes encryptionPublicKey, uint256 registeredAt))",
   "function isDoctorVerified(address _doctor) external view returns (bool)",
   "function getPublicKey(address _user) external view returns (bytes)",
+  "function getDoctorProfile(address _doctor) external view returns (tuple(string name, string licenseNumber, string specialty, string institution, uint256 registeredAt))",
 ];
 
 const RECORD_MANAGER_ABI = [
@@ -23,6 +24,10 @@ const RECORD_MANAGER_ABI = [
   "function getEmergencyRecords(address _owner) external view returns (uint256[])",
   "function restoreRecord(uint256 _recordId) external",
   "event RecordAdded(uint256 indexed recordId, address indexed owner, string ipfsCID, uint8 recordType, uint256 timestamp)",
+  "event RecordArchived(uint256 indexed recordId, address indexed owner, uint256 timestamp)",
+  "event RecordDeleted(uint256 indexed recordId, address indexed owner, uint256 timestamp)",
+  "event RecordRestored(uint256 indexed recordId, address indexed owner, uint256 timestamp)",
+  "event EmergencyFlagUpdated(uint256 indexed recordId, address indexed owner, bool isEmergency, uint256 timestamp)",
 ];
 
 const ACCESS_CONTROL_ABI = [
@@ -45,6 +50,7 @@ const ACCESS_CONTROL_ABI = [
   "event AccessGranted(uint256 indexed recordId, address indexed patient, address indexed doctor, uint256 expiresAt, uint256 timestamp)",
   "event AccessRevoked(uint256 indexed recordId, address indexed patient, address indexed doctor, uint256 timestamp)",
   "event AccessRequestRejected(uint256 indexed requestId, address indexed patient, address indexed doctor, uint256 timestamp)",
+  "event RecordAccessed(uint256 indexed recordId, address indexed accessor, address indexed recordOwner, uint8 accessType, uint256 timestamp)",
 ];
 
 const EMERGENCY_ACCESS_ABI = [
@@ -71,6 +77,9 @@ const EMERGENCY_ACCESS_ABI = [
   "event EmergencyOTPIssued(uint256 indexed sessionId, address indexed patient, address indexed doctor, uint256 expiresAt, uint256 timestamp)",
   "event EmergencySessionRevoked(uint256 indexed sessionId, address indexed patient, uint256 timestamp)",
   "event CustodianEmergencyKeysStored(address indexed patient, uint256 recordCount, uint256 timestamp)",
+  "event EmergencyOTPConsumed(uint256 indexed sessionId, address indexed doctor, uint256 timestamp)",
+  "event EmergencyRecordAccessed(uint256 indexed sessionId, uint256 indexed recordId, address indexed doctor, uint256 timestamp)",
+  "event EmergencySessionExpired(uint256 indexed sessionId, uint256 timestamp)",
 ];
 
 const RECORD_TYPES = [

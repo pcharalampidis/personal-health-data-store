@@ -4,6 +4,7 @@ import { getRecordManagerContract, getAccessControlContract, RECORD_TYPES, RECOR
 import { RecordViewer, type RecordViewerRecord } from "./RecordViewer.js";
 import { ConfirmModal } from "./ConfirmModal.js";
 import { friendlyErrorMessage } from "../utils/errorMessages.js";
+import { RecordAuditTrail } from "./RecordAuditTrail.js";
 
 interface RecordInfo {
   recordId: bigint;
@@ -40,6 +41,7 @@ export function RecordList({ account, provider, signer }: Props) {
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: string; record: RecordInfo } | null>(null);
+  const [auditRecordId, setAuditRecordId] = useState<bigint | null>(null);
 
   useEffect(() => {
     loadRecords();
@@ -354,6 +356,12 @@ export function RecordList({ account, provider, signer }: Props) {
               >
                 {loadingKey === String(r.recordId) ? "Loading…" : "View"}
               </button>
+              <button
+                style={styles.auditBtn}
+                onClick={() => setAuditRecordId(r.recordId)}
+              >
+                Audit History
+              </button>
               {signer && (
                 <>
                   <button style={styles.actionBtn} onClick={() => setConfirmAction({ type: r.isEmergency ? "emergency-off" : "emergency-on", record: r })}>
@@ -374,6 +382,12 @@ export function RecordList({ account, provider, signer }: Props) {
               <button style={styles.viewBtn} onClick={() => handleView(r)} disabled={loadingKey === String(r.recordId)}>
                 {loadingKey === String(r.recordId) ? "Loading…" : "View"}
               </button>
+              <button
+                style={styles.auditBtn}
+                onClick={() => setAuditRecordId(r.recordId)}
+              >
+                Audit History
+              </button>
               <button style={styles.actionBtn} onClick={() => setConfirmAction({ type: "restore", record: r })}>
                 Restore
               </button>
@@ -388,6 +402,15 @@ export function RecordList({ account, provider, signer }: Props) {
           record={viewerRecord}
           mode="owner"
           onClose={() => setViewerRecord(null)}
+        />
+      )}
+
+      {auditRecordId != null && (
+        <RecordAuditTrail
+          recordId={auditRecordId}
+          patientAddress={account}
+          provider={provider}
+          onClose={() => setAuditRecordId(null)}
         />
       )}
 
@@ -542,6 +565,17 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "var(--radius-md)",
     background: "var(--color-primary)",
     color: "#fff",
+    cursor: "pointer",
+    fontSize: "var(--font-sm)",
+    fontWeight: 500,
+    minHeight: "var(--touch-target)",
+  },
+  auditBtn: {
+    padding: "var(--space-sm) var(--space-md)",
+    border: "1px solid var(--color-accent)",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-bg)",
+    color: "var(--color-accent)",
     cursor: "pointer",
     fontSize: "var(--font-sm)",
     fontWeight: 500,

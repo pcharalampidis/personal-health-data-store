@@ -5,6 +5,9 @@ import { usePermissions } from "../hooks/usePermissions.js";
 import { RECORD_TYPES, getRecordManagerContract, getUserRegistryContract } from "../services/contracts.js";
 import { fromHex, toHex } from "../utils/encryption.js";
 import { importPublicKeyJWK, importPrivateKeyJWK, wrapAESKey, unwrapAESKey, getStoredPrivateKeyJWK } from "../utils/rsaKeys.js";
+import { useDoctorProfiles } from "../hooks/useDoctorProfiles.js";
+import { DoctorIdentityCard } from "./DoctorIdentityCard.js";
+import type { DoctorIdentity } from "../types/profiles.js";
 
 interface RecordInfo {
   recordId: bigint;
@@ -29,6 +32,35 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
   const [localError, setLocalError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const { resolveDoctor } = useDoctorProfiles(provider);
+  const [resolvedDoctor, setResolvedDoctor] = useState<DoctorIdentity | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+
+  const handleLookup = async () => {
+    setLocalError("");
+    setSuccess("");
+    setResolvedDoctor(null);
+
+    if (!isAddress(doctorAddress)) {
+      setLocalError("Invalid doctor wallet address");
+      return;
+    }
+
+    setLookingUp(true);
+    try {
+      const doc = await resolveDoctor(doctorAddress);
+      if (doc.isVerified) {
+        setResolvedDoctor(doc);
+      } else {
+        setLocalError("This address is not registered as a doctor");
+      }
+    } catch (err) {
+      setLocalError("Error looking up doctor");
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
   const handleGrant = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError("");
@@ -50,16 +82,14 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
       return;
     }
 
+    if (!resolvedDoctor || !resolvedDoctor.isVerified) {
+      setLocalError("Please look up a registered doctor address first");
+      return;
+    }
+
     setProcessing(true);
 
     try {
-      const verified = await isDoctorVerified(doctorAddress);
-      if (!verified) {
-        setLocalError("Address is not a verified doctor");
-        setProcessing(false);
-        return;
-      }
-
       const recordId = BigInt(selectedRecord);
       const expiresAt = BigInt(Math.floor(Date.now() / 1000) + days * 24 * 60 * 60);
 
@@ -83,11 +113,12 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
       const doctorWrapped = await wrapAESKey(aesKey, doctorRsaPub);
       const doctorWrappedHex = toHex(doctorWrapped);
 
-      const success = await grantAccess(recordId, doctorAddress, expiresAt, doctorWrappedHex);
+      const success = await grantAccess(recordId, resolvedDoctor.address, expiresAt, doctorWrappedHex);
 
       if (success) {
-        setSuccess(`Access granted to ${doctorAddress.slice(0, 10)}... for ${days} days`);
+        setSuccess(`Access granted to ${resolvedDoctor.displayName} for ${days} days`);
         setDoctorAddress("");
+        setResolvedDoctor(null);
         setSelectedRecord("");
         onGranted?.();
       }
@@ -127,15 +158,35 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
 
         <div style={styles.field}>
           <label style={styles.label}>Doctor Wallet Address</label>
-          <input
-            type="text"
-            style={styles.input}
-            placeholder="0x..."
-            value={doctorAddress}
-            onChange={(e) => setDoctorAddress(e.target.value)}
-            disabled={processing}
-          />
+          <div style={styles.lookupContainer}>
+            <input
+              type="text"
+              style={{ ...styles.input, flex: 1 }}
+              placeholder="0x..."
+              value={doctorAddress}
+              onChange={(e) => {
+                setDoctorAddress(e.target.value);
+                setResolvedDoctor(null);
+                setLocalError("");
+              }}
+              disabled={processing || lookingUp}
+            />
+            <button
+              type="button"
+              onClick={handleLookup}
+              style={styles.lookupBtn}
+              disabled={processing || lookingUp || !doctorAddress}
+            >
+              {lookingUp ? "Searching..." : "Lookup Doctor"}
+            </button>
+          </div>
         </div>
+
+        {resolvedDoctor && (
+          <div style={styles.profileCardWrapper}>
+            <DoctorIdentityCard profile={resolvedDoctor} compact={false} />
+          </div>
+        )}
 
         <div style={styles.field}>
           <label style={styles.label}>Access Duration (days)</label>
@@ -155,8 +206,8 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
         )}
         {success && <p style={styles.success}>{success}</p>}
 
-        <button type="submit" style={styles.submitBtn} disabled={processing}>
-          {processing ? "Processing..." : "Grant Access"}
+        <button type="submit" style={styles.submitBtn} disabled={processing || lookingUp || !resolvedDoctor}>
+          {processing ? "Processing..." : `Grant Access to ${resolvedDoctor?.displayName}`}
         </button>
       </form>
     </div>
@@ -169,6 +220,25 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "var(--radius-lg)",
     border: "1px solid var(--color-border)",
     background: "var(--color-bg-secondary)",
+  },
+  lookupContainer: {
+    display: "flex",
+    gap: "var(--space-sm)",
+  },
+  lookupBtn: {
+    padding: "var(--space-sm) var(--space-md)",
+    border: "1px solid var(--color-primary)",
+    borderRadius: "var(--radius-md)",
+    background: "var(--color-bg)",
+    color: "var(--color-primary)",
+    cursor: "pointer",
+    fontSize: "var(--font-sm)",
+    fontWeight: 600,
+    minHeight: "var(--touch-target)",
+  },
+  profileCardWrapper: {
+    marginTop: "var(--space-xs)",
+    marginBottom: "var(--space-xs)",
   },
   heading: {
     margin: "0 0 var(--space-sm)",
