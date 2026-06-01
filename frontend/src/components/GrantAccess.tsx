@@ -83,7 +83,12 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
     }
 
     if (!resolvedDoctor || !resolvedDoctor.isVerified) {
-      setLocalError("Please look up a registered doctor address first");
+      setLocalError("Please look up a registered doctor profile before granting access.");
+      return;
+    }
+
+    if (resolvedDoctor.address.toLowerCase() !== doctorAddress.toLowerCase()) {
+      setLocalError("Doctor address changed. Please look up the doctor again.");
       return;
     }
 
@@ -131,11 +136,25 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
 
   const activeRecords = records.filter((r) => true);
 
+  const normalizedDoctorInput = doctorAddress.toLowerCase();
+
+  const lookupMatchesInput =
+    resolvedDoctor &&
+    resolvedDoctor.address.toLowerCase() === normalizedDoctorInput;
+
+  const canSubmitGrant =
+    Boolean(selectedRecord) &&
+    isAddress(doctorAddress) &&
+    Boolean(resolvedDoctor?.isVerified) &&
+    Boolean(lookupMatchesInput) &&
+    !processing &&
+    !lookingUp;
+
   return (
     <div style={styles.card}>
       <h3 style={styles.heading}>Grant Direct Access</h3>
       <p style={styles.description}>
-        Share a health record directly with a verified doctor without waiting for a request.
+        Share a health record directly with a registered doctor profile without waiting for a request.
       </p>
 
       <form onSubmit={handleGrant} style={styles.form}>
@@ -206,8 +225,16 @@ export function GrantAccess({ account, provider, signer, records, onGranted }: P
         )}
         {success && <p style={styles.success}>{success}</p>}
 
-        <button type="submit" style={styles.submitBtn} disabled={processing || lookingUp || !resolvedDoctor}>
-          {processing ? "Processing..." : `Grant Access to ${resolvedDoctor?.displayName}`}
+        <button
+          type="submit"
+          style={styles.submitBtn}
+          disabled={!canSubmitGrant}
+        >
+          {processing
+            ? "Processing..."
+            : resolvedDoctor
+            ? `Grant Access to ${resolvedDoctor.displayName}`
+            : "Look up doctor first"}
         </button>
       </form>
     </div>

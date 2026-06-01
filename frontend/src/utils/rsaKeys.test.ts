@@ -7,8 +7,8 @@ import {
   importPrivateKeyJWK,
   wrapAESKey,
   unwrapAESKey,
-} from "./rsaKeys";
-import { generateAESKey, exportKey } from "./encryption";
+} from "./rsaKeys.js";
+import { generateAESKey, exportKey } from "./encryption.js";
 
 describe("RSA-OAEP key wrapping", () => {
   it("should wrap and unwrap an AES key round-trip", async () => {

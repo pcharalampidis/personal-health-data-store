@@ -43,7 +43,7 @@ export function PrivacySecurityInfo() {
       </Section>
 
       <Section id="emergency" title="What emergency access means" expanded={expanded} toggle={toggle}>
-        <p>Emergency access allows trusted contacts or verified healthcare providers to view your emergency-marked records when you cannot provide consent.</p>
+        <p>Emergency access allows trusted contacts or registered healthcare providers to view your emergency-marked records when you cannot provide consent.</p>
         <p>Emergency sessions are temporary (time-limited) and every record access is permanently logged for accountability.</p>
         <p>You choose which records are emergency-accessible and who your trusted contacts are.</p>
       </Section>

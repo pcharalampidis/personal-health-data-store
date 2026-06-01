@@ -6,6 +6,9 @@ import type { DoctorIdentity } from "../types/profiles.js";
 vi.mock("../services/contracts.js", () => {
   return {
     getRecordManagerContract: () => ({
+      getRecord: vi.fn().mockResolvedValue({
+        owner: "0xPatientAddress",
+      }),
       filters: {
         RecordAdded: vi.fn().mockReturnValue({ event: "RecordAdded" }),
         RecordArchived: vi.fn().mockReturnValue({ event: "RecordArchived" }),
