@@ -120,7 +120,7 @@ Last roll-up update: 2026-05-27 (post FP-8)
 - Owner: `developer+agent`
 - Linked TODO tasks: `M2.1`, `M2.2`, `M2.3`
 - Linked tests: `AC-T01` to `AC-T13`, `INT-T01`, `INT-T03`
-- Model Notes: Patient-controlled grant to verified doctors only. Validated with edge cases for request expiry and record-state revalidation during approval. Doctor request UI now implemented (M2.3).
+- Model Notes: Patient-controlled grant to registered doctor profiles only. Validated with edge cases for request expiry and record-state revalidation during approval. Doctor request UI now implemented (M2.3).
 - Evidence links: `contracts/AccessControl.sol` (requestAccess, approveAccess, grantAccess), `test/AccessControl.test.ts` (42 AccessControl tests; includes `Expiry, Revocation, and Edge Cases`), `frontend/src/components/RequestAccess.tsx`, `frontend/src/hooks/useDoctorAccess.ts`
 - Last updated: `2026-05-05`
 

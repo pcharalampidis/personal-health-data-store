@@ -16,6 +16,24 @@ Keep entries short and factual for dissertation traceability.
   - Docs: <files updated or "None">
 ```
 
+## 2026-06-02 (Audit Timeline & Identity Must-Fixes)
+
+- Change: Implemented 5 must-fix corrections for Record Audit Timeline & Doctor Identity Display.
+- Reason: Resolve wording inconsistencies, harden lookup security constraints, enforce strict on-chain validation for audit trails and access logging.
+- Impact:
+  - Requirements: FR-011, FR-012, FR-016, NFR-013, NFR-014, NFR-016
+  - Tests: Contract suite expanded to 161 tests passing; frontend test suite expanded to 25 tests passing.
+  - Docs: Updated `docs/CHANGES.md`, `docs/REQUIREMENTS_STATUS.md`, and `docs/USER_ACTION_SEMANTICS.md`.
+  - Modified (contracts):
+    - `AccessControl.sol` (added active-record check in `logAccess`)
+  - Modified (frontend):
+    - `DoctorIdentityCard.tsx` (updated badge wording to "Registered Doctor Profile")
+    - `GrantAccess.tsx` (hardened lookup verification using `canSubmitGrant` state)
+    - `PrivacySecurityInfo.tsx` (aligned wording to registered healthcare providers)
+    - `RecordList.tsx` (restructured cards to expose audit trail buttons for deleted items; renamed "All Status" filter to "Active + Archived")
+    - `auditTrail.ts` (query actual on-chain owner via `recordManager.getRecord`)
+    - `auditTrail.test.ts` (mocked `getRecord` to return patient owner)
+
 ## 2026-05-27 (Track B + M5 + Final Polish)
 
 - Change: Track B — Action Semantics & Disclosure (AS-1 to AS-8)
