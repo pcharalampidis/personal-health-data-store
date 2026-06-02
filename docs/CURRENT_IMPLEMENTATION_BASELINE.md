@@ -39,6 +39,7 @@ All contracts: 151 tests passing.
 | Registration | Patient/doctor with RSA-OAEP 2048-bit keypair generation |
 | Upload | PHDS2 packaging, AES-256-GCM, RSA key wrapping, stepper UX, file validation |
 | Record list | Cards with View/Archive/Restore/Emergency toggle/Remove from vault actions |
+| Record audit trail | Overlay modal displaying full timeline of record lifecycle and access events with doctor profile resolution |
 | Record viewer | Unified RecordViewer: PDF/image/JSON preview, integrity badge, decrypt states |
 | Grant/revoke access | Unwrap patient key → re-wrap for doctor, ConfirmModal on revoke |
 | Doctor shared records | RecordViewer in doctor mode, access logged after decrypt |
@@ -98,7 +99,6 @@ All contracts: 151 tests passing.
 
 | Gap | Notes |
 |---|---|
-| Activity/audit timeline page | Contract events exist; no UI timeline yet |
 | Paused contract UX | Contracts have pause; no user-facing maintenance banner |
 | Key backup/export | localStorage only; no backup mechanism (MVP trade-off) |
 
