@@ -523,6 +523,32 @@ describe("AccessControl", function () {
         accessControl.connect(doctor1).logAccess(recordId, 0)
       ).to.be.revertedWith("AccessControl: no access to record");
     });
+
+    it("should not log access for archived records", async function () {
+      const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 86400);
+      await accessControl.connect(patient1).grantAccess(
+        recordId, doctor1.address, expiresAt, SAMPLE_ENCRYPTED_KEY_2
+      );
+
+      await recordManager.connect(patient1).archiveRecord(recordId);
+
+      await expect(
+        accessControl.connect(doctor1).logAccess(recordId, 0)
+      ).to.be.revertedWith("AccessControl: record not active");
+    });
+
+    it("should not log access for deleted records", async function () {
+      const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 86400);
+      await accessControl.connect(patient1).grantAccess(
+        recordId, doctor1.address, expiresAt, SAMPLE_ENCRYPTED_KEY_2
+      );
+
+      await recordManager.connect(patient1).deleteRecord(recordId);
+
+      await expect(
+        accessControl.connect(doctor1).logAccess(recordId, 0)
+      ).to.be.revertedWith("AccessControl: record not active");
+    });
   });
 
   // ── AC-T10: View Functions ────────────────────────

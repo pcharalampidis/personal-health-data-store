@@ -24,8 +24,14 @@ export async function loadRecordAuditTrail(
   const accessControl = getAccessControlContract(provider);
   const emergencyAccess = getEmergencyAccessContract(provider);
 
-  const cleanPatientAddr = patientAddress.toLowerCase();
+  const record = await recordManager.getRecord(recordId);
+  const recordOwner = record.owner as string;
+  const cleanPatientAddr = recordOwner.toLowerCase();
   const targetIdStr = String(recordId);
+
+  if (patientAddress && patientAddress.toLowerCase() !== cleanPatientAddr) {
+    console.warn("AuditTrail: passed patientAddress does not match on-chain record owner");
+  }
 
   // 1. Helper to fetch actor/counterparty labels
   const resolveLabels = async (actor: string, counterparty: string) => {
@@ -295,7 +301,7 @@ export async function loadRecordAuditTrail(
 
   try {
     // Filter AccessRequested by patient Address
-    const filterAccessRequested = accessControl.filters.AccessRequested(null, null, patientAddress);
+    const filterAccessRequested = accessControl.filters.AccessRequested(null, null, recordOwner);
     const logsAccessRequested = await accessControl.queryFilter(filterAccessRequested);
     for (const log of logsAccessRequested) {
       if ("args" in log && log.args) {
@@ -319,7 +325,7 @@ export async function loadRecordAuditTrail(
             description: `Access requested for reason: "${args.reason}"`,
             actor: args.doctor,
             actorLabel,
-            counterparty: args.patient,
+            counterparty: recordOwner,
             counterpartyLabel,
             timestamp: args.timestamp,
             blockNumber: log.blockNumber,
@@ -335,7 +341,7 @@ export async function loadRecordAuditTrail(
 
   try {
     // Filter AccessRequestRejected by patient Address
-    const filterAccessRejected = accessControl.filters.AccessRequestRejected(null, patientAddress);
+    const filterAccessRejected = accessControl.filters.AccessRequestRejected(null, recordOwner);
     const logsAccessRejected = await accessControl.queryFilter(filterAccessRejected);
     for (const log of logsAccessRejected) {
       if ("args" in log && log.args) {
@@ -374,7 +380,7 @@ export async function loadRecordAuditTrail(
     for (const log of logsEmergencyAccess) {
       if ("args" in log && log.args) {
         const args = log.args;
-        const { actorLabel, counterpartyLabel } = await resolveLabels(args.doctor, patientAddress);
+        const { actorLabel, counterpartyLabel } = await resolveLabels(args.doctor, recordOwner);
         entries.push({
           id: `${log.transactionHash}-${log.index}`,
           recordId,
@@ -384,7 +390,7 @@ export async function loadRecordAuditTrail(
           description: `Emergency record opened (Session: #${String(args.sessionId)}).`,
           actor: args.doctor,
           actorLabel,
-          counterparty: patientAddress,
+          counterparty: recordOwner,
           counterpartyLabel,
           timestamp: args.timestamp,
           blockNumber: log.blockNumber,

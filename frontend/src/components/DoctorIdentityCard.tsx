@@ -20,7 +20,7 @@ export function DoctorIdentityCard({
         <div style={styles.nameRow}>
           <span style={styles.displayName}>{profile.displayName}</span>
           {showVerificationNote && profile.isVerified && (
-            <span style={styles.verifiedBadge}>Registered Doctor</span>
+            <span style={styles.verifiedBadge}>Registered Doctor Profile</span>
           )}
         </div>
         <div style={styles.subtitle}>{profile.displaySubtitle}</div>

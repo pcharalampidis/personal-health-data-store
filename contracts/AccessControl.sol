@@ -318,6 +318,11 @@ contract AccessControl is IAccessControl {
     ) external override {
         IRecordManager.HealthRecord memory record = recordManager.getRecord(_recordId);
         
+        require(
+            recordManager.isRecordActive(_recordId),
+            "AccessControl: record not active"
+        );
+
         bool hasPermission = record.owner == msg.sender;
         
         if (!hasPermission) {

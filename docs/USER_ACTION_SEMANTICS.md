@@ -289,7 +289,7 @@ Does NOT mean:
 - Records are shared permanently
 
 Required UI copy:
-> This prepares protected access keys so your trusted contacts or verified emergency providers can unlock emergency records if needed.
+> This prepares protected access keys so your trusted contacts or registered emergency providers can unlock emergency records if needed.
 
 ---
 

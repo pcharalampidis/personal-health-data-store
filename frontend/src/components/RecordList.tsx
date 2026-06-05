@@ -284,7 +284,7 @@ export function RecordList({ account, provider, signer }: Props) {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
             >
-              <option value="all">All Status</option>
+              <option value="all">Active + Archived</option>
               <option value="active">Active</option>
               <option value="archived">Archived</option>
               <option value="deleted">Deleted</option>
@@ -347,8 +347,8 @@ export function RecordList({ account, provider, signer }: Props) {
             <span>Stored securely</span>
             <span>Created: {formatDate(r.createdAt)}</span>
           </div>
-          {r.status === 0 && (
-            <div style={styles.recordActions}>
+          <div style={styles.recordActions}>
+            {r.status !== 2 && (
               <button
                 style={styles.viewBtn}
                 onClick={() => handleView(r)}
@@ -356,43 +356,37 @@ export function RecordList({ account, provider, signer }: Props) {
               >
                 {loadingKey === String(r.recordId) ? "Loading…" : "View"}
               </button>
-              <button
-                style={styles.auditBtn}
-                onClick={() => setAuditRecordId(r.recordId)}
-              >
-                Audit History
-              </button>
-              {signer && (
-                <>
-                  <button style={styles.actionBtn} onClick={() => setConfirmAction({ type: r.isEmergency ? "emergency-off" : "emergency-on", record: r })}>
-                    {r.isEmergency ? "Remove emergency" : "Mark emergency"}
-                  </button>
-                  <button style={styles.archiveBtn} onClick={() => setConfirmAction({ type: "archive", record: r })}>
-                    Archive
-                  </button>
-                  <button style={styles.deleteBtn} onClick={() => setConfirmAction({ type: "delete", record: r })}>
-                    Remove from vault
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-          {r.status === 1 && signer && (
-            <div style={styles.recordActions}>
-              <button style={styles.viewBtn} onClick={() => handleView(r)} disabled={loadingKey === String(r.recordId)}>
-                {loadingKey === String(r.recordId) ? "Loading…" : "View"}
-              </button>
-              <button
-                style={styles.auditBtn}
-                onClick={() => setAuditRecordId(r.recordId)}
-              >
-                Audit History
-              </button>
+            )}
+            <button
+              style={styles.auditBtn}
+              onClick={() => setAuditRecordId(r.recordId)}
+            >
+              Audit History
+            </button>
+            {r.status === 0 && signer && (
+              <>
+                <button style={styles.actionBtn} onClick={() => setConfirmAction({ type: r.isEmergency ? "emergency-off" : "emergency-on", record: r })}>
+                  {r.isEmergency ? "Remove emergency" : "Mark emergency"}
+                </button>
+                <button style={styles.archiveBtn} onClick={() => setConfirmAction({ type: "archive", record: r })}>
+                  Archive
+                </button>
+                <button style={styles.deleteBtn} onClick={() => setConfirmAction({ type: "delete", record: r })}>
+                  Remove from vault
+                </button>
+              </>
+            )}
+            {r.status === 1 && signer && (
               <button style={styles.actionBtn} onClick={() => setConfirmAction({ type: "restore", record: r })}>
                 Restore
               </button>
-            </div>
-          )}
+            )}
+            {r.status === 2 && (
+              <span style={styles.deletedHint}>
+                Removed from vault. Audit history remains available.
+              </span>
+            )}
+          </div>
         </div>
       ))}
 
@@ -580,6 +574,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "var(--font-sm)",
     fontWeight: 500,
     minHeight: "var(--touch-target)",
+  },
+  deletedHint: {
+    fontSize: "var(--font-sm)",
+    color: "var(--color-text-muted)",
+    fontStyle: "italic",
+    display: "inline-flex",
+    alignItems: "center",
   },
   actionBtn: {
     padding: "var(--space-sm) var(--space-md)",
