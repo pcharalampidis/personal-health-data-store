@@ -121,11 +121,25 @@ export function useEmergencyAccess(
       }
 
       const contract = getEmergencyAccessContract(provider);
-      const sessions = role === "patient"
-        ? await contract.getSessionsByPatient(account)
-        : await contract.getSessionsByDoctor(account);
+      let sessions: any[] = [];
+      if (role === "patient") {
+        const patientSessions = await contract.getSessionsByPatient(account);
+        const accessorSessions = await contract.getSessionsByDoctor(account);
+        const combined = [...patientSessions, ...accessorSessions];
+        const seen = new Set<string>();
+        for (const s of combined) {
+          const key = s.sessionId.toString();
+          if (!seen.has(key)) {
+            seen.add(key);
+            sessions.push(s);
+          }
+        }
+        sessions.sort((a, b) => Number(b.sessionId - a.sessionId));
+      } else {
+        sessions = await contract.getSessionsByDoctor(account);
+      }
 
-      const parsed: EmergencySession[] = sessions.map((s: EmergencySession) => ({
+      const parsed: EmergencySession[] = sessions.map((s: any) => ({
         sessionId: s.sessionId,
         patient: s.patient,
         doctor: s.doctor,

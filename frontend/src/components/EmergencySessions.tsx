@@ -156,7 +156,7 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
 
   const canRevoke = (session: EmergencySession) => {
     return (
-      role === "patient" &&
+      session.patient.toLowerCase() === account.toLowerCase() &&
       session.status !== 3 &&
       session.status !== 4 &&
       !isExpired(session)
@@ -165,7 +165,7 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
 
   const canConsume = (session: EmergencySession) => {
     return (
-      role === "doctor" &&
+      session.doctor.toLowerCase() === account.toLowerCase() &&
       session.status === 1 &&
       !isExpired(session)
     );
@@ -300,27 +300,29 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
       {activeSessions.length > 0 && (
         <div style={styles.section}>
           <h3 style={styles.subheading}>Active Sessions ({activeSessions.length})</h3>
-          {activeSessions.map((session) => (
-            <div key={String(session.sessionId)} style={styles.sessionCard}>
-              <div style={styles.sessionHeader}>
-                <span style={styles.sessionId}>Session #{String(session.sessionId)}</span>
-                <div style={styles.badges}>
-                  <span style={{ ...styles.badge, ...getStatusStyle(session.status, session) }}>
-                    {isExpired(session) ? "Expired" : SESSION_STATUS_LABELS[session.status]}
-                  </span>
-                  <span style={styles.triggerBadge}>
-                    {TRIGGER_TYPE_LABELS[session.triggerType]}
-                  </span>
+          {activeSessions.map((session) => {
+            const isUserPatient = session.patient.toLowerCase() === account.toLowerCase();
+            return (
+              <div key={String(session.sessionId)} style={styles.sessionCard}>
+                <div style={styles.sessionHeader}>
+                  <span style={styles.sessionId}>Session #{String(session.sessionId)}</span>
+                  <div style={styles.badges}>
+                    <span style={{ ...styles.badge, ...getStatusStyle(session.status, session) }}>
+                      {isExpired(session) ? "Expired" : SESSION_STATUS_LABELS[session.status]}
+                    </span>
+                    <span style={styles.triggerBadge}>
+                      {TRIGGER_TYPE_LABELS[session.triggerType]}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              <div style={styles.sessionDetails}>
-                <div style={styles.detailRow}>
-                  <span>{role === "patient" ? "Doctor:" : "Patient:"}</span>
-                  <span style={styles.mono}>
-                    {formatAddress(role === "patient" ? session.doctor : session.patient)}
-                  </span>
-                </div>
+                <div style={styles.sessionDetails}>
+                  <div style={styles.detailRow}>
+                    <span>{isUserPatient ? "Triggered By (Doctor/Contact):" : "Patient:"}</span>
+                    <span style={styles.mono}>
+                      {formatAddress(isUserPatient ? session.doctor : session.patient)}
+                    </span>
+                  </div>
                 <div style={styles.detailRow}>
                   <span>Triggered:</span>
                   <span>{formatDate(session.triggeredAt)}</span>
@@ -364,14 +366,15 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
                     {consuming === String(session.sessionId) ? "Opening..." : "Open emergency session"}
                   </button>
                 )}
-                {session.status === 0 && role === "doctor" && (
+                {session.status === 0 && session.doctor.toLowerCase() === account.toLowerCase() && (
                   <span style={styles.pendingNote}>
                     Awaiting Custodian validation...
                   </span>
                 )}
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       )}
 
@@ -382,21 +385,25 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
       {pastSessions.length > 0 && (
         <div style={styles.section}>
           <h3 style={styles.subheading}>Past Sessions ({pastSessions.length})</h3>
-          {pastSessions.slice(0, 5).map((session) => (
-            <div key={String(session.sessionId)} style={styles.pastSession}>
-              <div style={styles.pastHeader}>
-                <span>#{String(session.sessionId)}</span>
-                <span style={{ ...styles.smallBadge, ...getStatusStyle(session.status, session) }}>
-                  {isExpired(session) && session.status !== 3 && session.status !== 4
-                    ? "Expired"
-                    : SESSION_STATUS_LABELS[session.status]}
-                </span>
-                <span style={styles.pastMeta}>
-                  {formatAddress(role === "patient" ? session.doctor : session.patient)}
-                </span>
+          {pastSessions.slice(0, 5).map((session) => {
+            const isUserPatient = session.patient.toLowerCase() === account.toLowerCase();
+            return (
+              <div key={String(session.sessionId)} style={styles.pastSession}>
+                <div style={styles.pastHeader}>
+                  <span>#{String(session.sessionId)}</span>
+                  <span style={{ ...styles.smallBadge, ...getStatusStyle(session.status, session) }}>
+                    {isExpired(session) && session.status !== 3 && session.status !== 4
+                      ? "Expired"
+                      : SESSION_STATUS_LABELS[session.status]}
+                  </span>
+                  <span style={styles.pastMeta}>
+                    {isUserPatient ? "From: " : "Patient: "}
+                    {formatAddress(isUserPatient ? session.doctor : session.patient)}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
