@@ -298,15 +298,13 @@ export async function startEventListener(): Promise<boolean> {
     throw new Error("Emergency service not initialized");
   }
 
-  const filter = emergencyContract.filters.EmergencyAccessTriggered();
-
   const handler = async (
     sessionId: bigint,
     _patient: string,
     doctor: string,
-    triggerType: number
+    triggerType: number | bigint
   ) => {
-    if (triggerType === TRIGGER_TYPE.CUSTODIAN_REGISTRY) {
+    if (Number(triggerType) === TRIGGER_TYPE.CUSTODIAN_REGISTRY) {
       console.log(
         `[Emergency] New pending session #${sessionId} from doctor ${doctor}`
       );
@@ -324,11 +322,11 @@ export async function startEventListener(): Promise<boolean> {
     }
   };
 
-  await emergencyContract.on(filter, handler);
+  await emergencyContract.on("EmergencyAccessTriggered", handler);
   listenerActive = true;
 
   listenerCleanup = () => {
-    emergencyContract?.off(filter, handler);
+    emergencyContract?.off("EmergencyAccessTriggered", handler);
     listenerActive = false;
   };
 

@@ -143,11 +143,6 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
   };
 
   const handleSyncEmergencyKeys = async () => {
-    if (!config?.isConfigured) {
-      setLocalError("Configure emergency access first");
-      return;
-    }
-
     const flaggedRecords = emergencyRecords.filter((r) => r.isEmergency);
     if (flaggedRecords.length === 0) {
       setLocalError("No emergency-flagged records to sync");
@@ -165,7 +160,7 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
 
       const recordManager = getRecordManagerContract(signer);
       const userRegistry = getUserRegistryContract(signer);
-      const trustedContacts = config.trustedContacts;
+      const trustedContacts = config?.isConfigured ? config.trustedContacts : [];
 
       // Pre-fetch contact public keys
       const contactPubKeys: CryptoKey[] = [];
@@ -185,6 +180,10 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
           custodianPubKey = await importPublicKeyJWK(custodianPubJson);
         }
       } catch { /* Custodian endpoint may not be available */ }
+
+      if (!custodianPubKey && trustedContacts.length === 0) {
+        throw new Error("Cannot sync: Custodian service is offline and no trusted contacts are configured.");
+      }
 
       const recordIds = flaggedRecords.map((r) => r.recordId);
       // Keys order for trusted contacts: [rec0-contact0, rec0-contact1, ..., rec1-contact0, ...]
@@ -208,7 +207,10 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
       }
 
       // Store trusted-contact wrapped keys
-      const ok = await storeEmergencyKeys(recordIds, trustedContacts, wrappedKeys);
+      let ok = true;
+      if (trustedContacts.length > 0 && wrappedKeys.length > 0) {
+        ok = await storeEmergencyKeys(recordIds, trustedContacts, wrappedKeys);
+      }
 
       // Store custodian-wrapped keys
       if (custodianPubKey && custodianWrappedKeys.length > 0) {
@@ -217,7 +219,15 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
         await tx.wait();
       }
 
-      if (ok) setSuccess("Emergency keys synced for trusted contacts and Custodian");
+      if (ok) {
+        if (trustedContacts.length > 0 && custodianPubKey) {
+          setSuccess("Emergency keys synced for trusted contacts and Custodian");
+        } else if (custodianPubKey) {
+          setSuccess("Emergency keys synced for Custodian");
+        } else {
+          setSuccess("Emergency keys synced for trusted contacts");
+        }
+      }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -354,7 +364,7 @@ export function EmergencyConfig({ account, provider, signer }: Props) {
               </div>
             ))}
 
-            {config?.isConfigured && emergencyCount > 0 && (
+            {emergencyCount > 0 && (
               <button
                 style={{ ...styles.saveBtn, marginTop: "var(--space-sm)" }}
                 onClick={handleSyncEmergencyKeys}
