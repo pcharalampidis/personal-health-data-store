@@ -73,7 +73,7 @@ export function EmergencySessions({ account, provider, signer, role, refreshKey 
       const result = await consumeEmergencyAccess(sessionId);
       if (result) {
         const recordManager = getRecordManagerContract(provider!);
-        const emergencyContract = getEmergencyAccessContract(provider!);
+        const emergencyContract = getEmergencyAccessContract(signer);
         const session = await emergencyContract.getSession(sessionId);
         const records: (RecordViewerRecord & { sessionId: bigint })[] = [];
 
