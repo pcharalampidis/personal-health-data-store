@@ -64,6 +64,18 @@ let emergencyContract: Contract | null = null;
 let recordManagerContract: Contract | null = null;
 let userRegistryContract: Contract | null = null;
 
+export function setContractInstances(
+  _emergencyContract: any,
+  _recordManagerContract?: any,
+  _userRegistryContract?: any,
+  _custodianWallet?: any
+) {
+  emergencyContract = _emergencyContract;
+  recordManagerContract = _recordManagerContract || null;
+  userRegistryContract = _userRegistryContract || null;
+  custodianWallet = _custodianWallet || null;
+}
+
 export function getEmergencyConfig() {
   const rpcUrl = process.env.RPC_URL || "http://127.0.0.1:8545";
   const emergencyAccessAddress = process.env.EMERGENCY_ACCESS_ADDRESS;
