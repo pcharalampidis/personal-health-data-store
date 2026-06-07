@@ -64,6 +64,18 @@ let emergencyContract: Contract | null = null;
 let recordManagerContract: Contract | null = null;
 let userRegistryContract: Contract | null = null;
 
+export function setContractInstances(
+  _emergencyContract: any,
+  _recordManagerContract?: any,
+  _userRegistryContract?: any,
+  _custodianWallet?: any
+) {
+  emergencyContract = _emergencyContract;
+  recordManagerContract = _recordManagerContract || null;
+  userRegistryContract = _userRegistryContract || null;
+  custodianWallet = _custodianWallet || null;
+}
+
 export function getEmergencyConfig() {
   const rpcUrl = process.env.RPC_URL || "http://127.0.0.1:8545";
   const emergencyAccessAddress = process.env.EMERGENCY_ACCESS_ADDRESS;
@@ -298,15 +310,13 @@ export async function startEventListener(): Promise<boolean> {
     throw new Error("Emergency service not initialized");
   }
 
-  const filter = emergencyContract.filters.EmergencyAccessTriggered();
-
   const handler = async (
     sessionId: bigint,
     _patient: string,
     doctor: string,
-    triggerType: number
+    triggerType: number | bigint
   ) => {
-    if (triggerType === TRIGGER_TYPE.CUSTODIAN_REGISTRY) {
+    if (Number(triggerType) === TRIGGER_TYPE.CUSTODIAN_REGISTRY) {
       console.log(
         `[Emergency] New pending session #${sessionId} from doctor ${doctor}`
       );
@@ -324,11 +334,11 @@ export async function startEventListener(): Promise<boolean> {
     }
   };
 
-  await emergencyContract.on(filter, handler);
+  await emergencyContract.on("EmergencyAccessTriggered", handler);
   listenerActive = true;
 
   listenerCleanup = () => {
-    emergencyContract?.off(filter, handler);
+    emergencyContract?.off("EmergencyAccessTriggered", handler);
     listenerActive = false;
   };
 

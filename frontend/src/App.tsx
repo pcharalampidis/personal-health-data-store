@@ -175,8 +175,9 @@ function App() {
           <>
             <div className="page-header">
               <h1 className="page-header__title">Emergency Access</h1>
-              <p className="page-header__description">Configure what can be accessed if you cannot provide consent.</p>
+              <p className="page-header__description">Configure what can be accessed if you cannot provide consent, or request emergency access for others.</p>
             </div>
+            <EmergencyTrigger account={account} provider={provider} signer={signer} onTriggered={handlePermissionChange} />
             <EmergencyConfig account={account} provider={provider} signer={signer} />
             <EmergencySessions account={account} provider={provider} signer={signer} role="patient" refreshKey={refreshKey} />
           </>

@@ -82,4 +82,29 @@ describe("RSA-OAEP key wrapping", () => {
     expect(Array.from(u1)).toEqual(Array.from(originalRaw));
     expect(Array.from(u2)).toEqual(Array.from(originalRaw));
   });
+
+  it("should execute the complete patient-to-doctor key re-wrapping flow", async () => {
+    // 1. Generate keys for both the patient and the doctor
+    const patientKeys = await generateRSAKeyPair();
+    const doctorKeys = await generateRSAKeyPair();
+
+    // 2. Patient uploads a record: generates AES key and wraps it for self-access
+    const originalAESKey = await generateAESKey();
+    const originalRawAES = await exportKey(originalAESKey);
+    const patientWrappedKey = await wrapAESKey(originalAESKey, patientKeys.publicKey);
+
+    // 3. Key Re-Wrapping: Patient unwraps the AES key using their private key
+    const unwrappedAESKey = await unwrapAESKey(patientWrappedKey, patientKeys.privateKey);
+
+    // ...and immediately re-wraps it using the doctor's public key
+    const doctorWrappedKey = await wrapAESKey(unwrappedAESKey, doctorKeys.publicKey);
+
+    // 4. Verification: Doctor retrieves and unwraps the key using their private key
+    const doctorUnwrappedAES = await unwrapAESKey(doctorWrappedKey, doctorKeys.privateKey);
+    const doctorRawAES = await exportKey(doctorUnwrappedAES);
+
+    // Assert that the doctor successfully recovered the identical key bytes
+    expect(Array.from(doctorRawAES)).toEqual(Array.from(originalRawAES));
+  });
 });
+

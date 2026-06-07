@@ -7,28 +7,8 @@ import "./interfaces/IEmergencyAccess.sol";
 
 /**
  * @title EmergencyAccess
- * @notice Hybrid emergency access: Trusted Contacts + Custodian Registry
- * @dev Custom Ownable + ReentrancyGuard (no OpenZeppelin).
- *
- * Two Emergency Access Paths:
- *
- * PATH 1: Trusted Contacts (Immediate)
- * - Patient pre-configures trusted contacts (any registered user)
- * - Patient pre-stores encrypted keys for emergency records
- * - When trusted contact triggers: immediate Active session
- * - Contact retrieves pre-stored keys directly
- *
- * PATH 2: Custodian Registry (Validated)
- * - Any verified doctor can trigger
- * - Creates Pending session
- * - Custodian validates against off-chain provider registry
- * - Custodian issues encrypted OTP if valid
- * - Doctor retrieves OTP and record IDs
- *
- * Requirements Covered: FR-014b, FR-014c, FR-014d
  */
 contract EmergencyAccess is IEmergencyAccess {
-    // ── Custom Ownable (Custodian) ──────────────────
     address public owner;
 
     modifier onlyOwner() {
@@ -41,7 +21,6 @@ contract EmergencyAccess is IEmergencyAccess {
         owner = newOwner;
     }
 
-    // ── Custom ReentrancyGuard ──────────────────────
     uint256 private constant _NOT_ENTERED = 1;
     uint256 private constant _ENTERED = 2;
     uint256 private _status;
